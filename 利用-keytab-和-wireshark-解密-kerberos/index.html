@@ -9,14 +9,14 @@
 <meta name="author-link" content="">
 <meta name="description" content="本文主要记录了如何通过一系列操作, 将生成的 keytab 文件导入 WireShark, 实现可以在 WireShark 中直接对 Kerberos 协议加密部分进行解密." /><meta name="keywords" content='域渗透' /><meta itemprop="name" content="利用 keytab 和 WireShark 解密 Kerberos">
 <meta itemprop="description" content="本文主要记录了如何通过一系列操作, 将生成的 keytab 文件导入 WireShark, 实现可以在 WireShark 中直接对 Kerberos 协议加密部分进行解密."><meta itemprop="datePublished" content="2022-11-27T22:12:22+08:00" />
-<meta itemprop="dateModified" content="2022-11-27T22:35:22+08:00" />
+<meta itemprop="dateModified" content="2022-12-05T21:33:41+08:00" />
 <meta itemprop="wordCount" content="859"><meta itemprop="image" content="https://TryA9ain.github.io/logo.png"/>
 <meta itemprop="keywords" content="域渗透," /><meta property="og:title" content="利用 keytab 和 WireShark 解密 Kerberos" />
 <meta property="og:description" content="本文主要记录了如何通过一系列操作, 将生成的 keytab 文件导入 WireShark, 实现可以在 WireShark 中直接对 Kerberos 协议加密部分进行解密." />
 <meta property="og:type" content="article" />
 <meta property="og:url" content="https://TryA9ain.github.io/%E5%88%A9%E7%94%A8-keytab-%E5%92%8C-wireshark-%E8%A7%A3%E5%AF%86-kerberos/" /><meta property="og:image" content="https://TryA9ain.github.io/logo.png"/><meta property="article:section" content="posts" />
 <meta property="article:published_time" content="2022-11-27T22:12:22+08:00" />
-<meta property="article:modified_time" content="2022-11-27T22:35:22+08:00" />
+<meta property="article:modified_time" content="2022-12-05T21:33:41+08:00" />
 
 <meta name="twitter:card" content="summary_large_image"/>
 <meta name="twitter:image" content="https://TryA9ain.github.io/logo.png"/>
@@ -36,7 +36,7 @@
       "@type": "WebPage",
       "@id": "https:\/\/TryA9ain.github.io\/%E5%88%A9%E7%94%A8-keytab-%E5%92%8C-wireshark-%E8%A7%A3%E5%AF%86-kerberos\/"
     },"image": ["https:\/\/TryA9ain.github.io\/images\/Apple-Devices-Preview.jpg"],"genre": "posts","keywords": "域渗透","wordcount":  859 ,
-    "url": "https:\/\/TryA9ain.github.io\/%E5%88%A9%E7%94%A8-keytab-%E5%92%8C-wireshark-%E8%A7%A3%E5%AF%86-kerberos\/","datePublished": "2022-11-27T22:12:22+08:00","dateModified": "2022-11-27T22:35:22+08:00","license": "This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.","publisher": {
+    "url": "https:\/\/TryA9ain.github.io\/%E5%88%A9%E7%94%A8-keytab-%E5%92%8C-wireshark-%E8%A7%A3%E5%AF%86-kerberos\/","datePublished": "2022-11-27T22:12:22+08:00","dateModified": "2022-12-05T21:33:41+08:00","license": "This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.","publisher": {
       "@type": "Organization",
       "name": "Lruihao","logo": "https:\/\/TryA9ain.github.io\/images\/1.jpeg"},"author": {
         "@type": "Person",
@@ -246,7 +246,7 @@
 </span></code></pre></td>
 <td class="lntd">
 <pre tabindex="0" class="chroma"><code class="language-Bash" data-lang="Bash"><span class="line"><span class="cl">mkdir result
-</span></span><span class="line"><span class="cl">python2 ntdsxtract/dskeytab.py NTDS.dit.export/datatable.4 NTDS.dit.export/link_table.7 system.hive ./result/ 1.keytab
+</span></span><span class="line"><span class="cl">python2 ntdsxtract/dskeytab.py ntds.dit.export/datatable.4 ntds.dit.export/link_table.7 system.hive ./result/ 1.keytab
 </span></span></code></pre></td></tr></table>
 </div>
 </div><p><img
@@ -316,7 +316,7 @@
   <div class="post-info">
     <div class="post-info-line">
       <div class="post-info-mod">
-        <span title=2022-11-27&#32;22:35:22>更新于 2022-11-27&nbsp;</span>
+        <span title=2022-12-05&#32;21:33:41>更新于 2022-12-05&nbsp;</span>
       </div></div>
     <div class="post-info-line">
       <div class="post-info-md"></div>

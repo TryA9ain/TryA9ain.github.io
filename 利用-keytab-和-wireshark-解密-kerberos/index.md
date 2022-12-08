@@ -66,7 +66,7 @@ esedbexport NTDS.dit
 
 ```Bash
 mkdir result
-python2 ntdsxtract/dskeytab.py NTDS.dit.export/datatable.4 NTDS.dit.export/link_table.7 system.hive ./result/ 1.keytab
+python2 ntdsxtract/dskeytab.py ntds.dit.export/datatable.4 ntds.dit.export/link_table.7 system.hive ./result/ 1.keytab
 ```
 
 ![](images/Pasted%20image%2020221105125916.png)

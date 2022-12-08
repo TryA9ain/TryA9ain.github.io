@@ -22,6 +22,14 @@
   <description><![CDATA[<p>本文主要记录了通过 WireShark 解开 Kerberos 协议对其进行分析, 很多东西不仅要知其然, 更要知其所以然.</p>]]></description>
 </item>
 <item>
+  <title>约束委派详解</title>
+  <link>https://TryA9ain.github.io/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/</link>
+  <pubDate>Thu, 24 Nov 2022 17:37:22 &#43;0800</pubDate>
+  <author>TryA9ain</author>
+  <guid>https://TryA9ain.github.io/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/</guid>
+  <description><![CDATA[<p>本文主要记录了通过 WireShark 解开 Kerberos 协议对约束委派进行详细分析.</p>]]></description>
+</item>
+<item>
   <title>Kali Linux 2022.2 安装 Parallels Tools</title>
   <link>https://TryA9ain.github.io/kali-linux-2022.1-%E5%AE%89%E8%A3%85-parallels-tools/</link>
   <pubDate>Tue, 22 Nov 2022 16:12:22 &#43;0800</pubDate>
