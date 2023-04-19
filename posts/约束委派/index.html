@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+  <head>
+    
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+    <meta name="robots" content="noodp" />
+    <title>约束委派详解 - TryA9ain-Blog</title><meta name="author" content="TryA9ain">
+<meta name="author-link" content="">
+<meta name="description" content="本文主要记录了通过 WireShark 解开 Kerberos 协议对约束委派进行详细分析. 基本概念 微软在 Windows 2003 上发布了约束委派, 其中包括一组 Kerberos 协议扩展: S4U2Self 和 S4U2Proxy. 需要 SeEnableDelegationPrivilege 权限才能配置约" /><meta name="keywords" content='域渗透' /><meta itemprop="name" content="约束委派详解">
+<meta itemprop="description" content="本文主要记录了通过 WireShark 解开 Kerberos 协议对约束委派进行详细分析. 基本概念 微软在 Windows 2003 上发布了约束委派, 其中包括一组 Kerberos 协议扩展: S4U2Self 和 S4U2Proxy. 需要 SeEnableDelegationPrivilege 权限才能配置约"><meta itemprop="datePublished" content="2022-11-24T17:37:22+08:00" />
+<meta itemprop="dateModified" content="2022-11-24T17:37:22+08:00" />
+<meta itemprop="wordCount" content="2204">
+<meta itemprop="keywords" content="域渗透," /><meta property="og:title" content="约束委派详解" />
+<meta property="og:description" content="本文主要记录了通过 WireShark 解开 Kerberos 协议对约束委派进行详细分析. 基本概念 微软在 Windows 2003 上发布了约束委派, 其中包括一组 Kerberos 协议扩展: S4U2Self 和 S4U2Proxy. 需要 SeEnableDelegationPrivilege 权限才能配置约" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://TryA9ain.github.io/posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/" /><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2022-11-24T17:37:22+08:00" />
+<meta property="article:modified_time" content="2022-11-24T17:37:22+08:00" />
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="约束委派详解"/>
+<meta name="twitter:description" content="本文主要记录了通过 WireShark 解开 Kerberos 协议对约束委派进行详细分析. 基本概念 微软在 Windows 2003 上发布了约束委派, 其中包括一组 Kerberos 协议扩展: S4U2Self 和 S4U2Proxy. 需要 SeEnableDelegationPrivilege 权限才能配置约"/>
+<meta name="application-name" content="FixIt">
+<meta name="apple-mobile-web-app-title" content="FixIt"><meta name="theme-color" data-light="#f8f8f8" data-dark="#252627" content="#f8f8f8"><meta name="msapplication-TileColor" content="#da532c"><link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5"><link rel="canonical" href="https://TryA9ain.github.io/posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/" /><link rel="prev" href="https://TryA9ain.github.io/posts/kali-linux-2022.1-%E5%AE%89%E8%A3%85-parallels-tools/" /><link rel="next" href="https://TryA9ain.github.io/posts/kerberos%E8%AE%A4%E8%AF%81%E8%BF%87%E7%A8%8B%E5%88%86%E6%9E%90/" /><link rel="stylesheet" href="/css/style.min.css"><link rel="stylesheet" href="/lib/fontawesome-free/all.min.css"><link rel="stylesheet" href="/lib/animate/animate.min.css"><script type="application/ld+json">
+  {
+    "@context": "http://schema.org",
+    "@type": "BlogPosting",
+    "headline": "约束委派详解",
+    "inLanguage": "zh-CN",
+    "mainEntityOfPage": {
+      "@type": "WebPage",
+      "@id": "https:\/\/TryA9ain.github.io\/posts\/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE\/"
+    },"genre": "posts","keywords": "域渗透","wordcount":  2204 ,
+    "url": "https:\/\/TryA9ain.github.io\/posts\/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE\/","datePublished": "2022-11-24T17:37:22+08:00","dateModified": "2022-11-24T17:37:22+08:00","publisher": {
+      "@type": "Organization",
+      "name": ""},"author": {
+        "@type": "Person",
+        "name": "TryA9ain"
+      },"description": ""
+  }
+  </script></head>
+  <body data-header-desktop="sticky" data-header-mobile="auto"><script>(window.localStorage?.getItem('theme') ? localStorage.getItem('theme') === 'dark' : ('auto' === 'auto' ? window.matchMedia('(prefers-color-scheme: dark)').matches : 'auto' === 'dark')) && document.body.setAttribute('data-theme', 'dark');</script><div class="wrapper" data-page-style="normal"><header class="desktop animate__faster" id="header-desktop">
+  <div class="header-wrapper">
+    <div class="header-title">
+      <a href="/" title="TryA9ain-Blog"><span class="header-title-text">TryA9ain</span></a><span class="header-subtitle"></span></div>
+    <nav>
+      <ul class="menu"><li class="menu-item">
+              <a
+                class="menu-link"
+                href="/posts/"
+                
+                
+              >文章</a></li><li class="menu-item">
+              <a
+                class="menu-link"
+                href="/categories/"
+                
+                
+              >分类</a></li><li class="menu-item">
+              <a
+                class="menu-link"
+                href="/tags/"
+                
+                
+              >标签</a></li><li class="menu-item delimiter"></li><li class="menu-item theme-switch" title="切换主题">
+          <i class="fa-solid fa-adjust fa-fw" aria-hidden="true"></i>
+        </li></ul>
+    </nav>
+  </div>
+</header><header class="mobile animate__faster" id="header-mobile">
+  <div class="header-container">
+    <div class="header-wrapper">
+      <div class="header-title">
+        <a href="/" title="TryA9ain-Blog"><span class="header-title-text">TryA9ain</span></a><span class="header-subtitle"></span></div>
+      <div class="menu-toggle" id="menu-toggle-mobile">
+        <span></span><span></span><span></span>
+      </div>
+    </div>
+    <nav>
+      <ul class="menu" id="menu-mobile"><li
+              class="menu-item"
+            ><a
+                  class="menu-link"
+                  href="/posts/"
+                  
+                  
+                >文章</a></li><li
+              class="menu-item"
+            ><a
+                  class="menu-link"
+                  href="/categories/"
+                  
+                  
+                >分类</a></li><li
+              class="menu-item"
+            ><a
+                  class="menu-link"
+                  href="/tags/"
+                  
+                  
+                >标签</a></li><li class="menu-item menu-system">
+          <span class="menu-system-item theme-switch" title="切换主题"><i class="fa-solid fa-adjust fa-fw" aria-hidden="true"></i></span></li>
+      </ul>
+    </nav>
+  </div>
+</header><main class="container"><aside class="toc" id="toc-auto"><h2 class="toc-title">目录&nbsp;<i class="toc-icon fa-solid fa-angle-down fa-fw" aria-hidden="true"></i></h2>
+      <div class="toc-content" id="toc-content-auto"></div></aside>
+
+  <aside class="aside-custom">
+    </aside>
+
+  <article class="page single">
+    <div class="header"><h1 class="single-title animate__animated animate__flipInX"><span>约束委派详解</span>
+      </h1></div><div class="post-meta">
+      <div class="post-meta-line"><span class="post-author"><span class="author"><img loading="lazy" src="/images/logo.jpeg" srcset="/images/logo.jpeg, /images/logo.jpeg 1.5x, /images/logo.jpeg 2x" sizes="auto" data-title="TryA9ain" data-alt="TryA9ain" class="avatar" style="background: url(/svg/loading.min.svg) no-repeat center;" onload="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}this.dataset.lazyloaded='';" onerror="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}"/>&nbsp;TryA9ain</span></span>
+          <span class="post-category">收录于 <a href="/categories/%E5%9F%9F%E6%B8%97%E9%80%8F%E7%9B%B8%E5%85%B3%E7%9F%A5%E8%AF%86/"><i class="fa-regular fa-folder fa-fw" aria-hidden="true"></i> 域渗透相关知识</a></span></div>
+      <div class="post-meta-line"><span title="发布于 2022-11-24 17:37:22"><i class="fa-regular fa-calendar-alt fa-fw me-1" aria-hidden="true"></i><time datetime="2022-11-24">2022-11-24</time></span>&nbsp;<span title="更新于 2022-11-24 17:37:22"><i class="fa-regular fa-edit fa-fw me-1" aria-hidden="true"></i><time datetime="2022-11-24">2022-11-24</time></span>&nbsp;<span><i class="fa-solid fa-pencil-alt fa-fw me-1" aria-hidden="true"></i>约 2204 字</span>&nbsp;<span><i class="fa-regular fa-clock fa-fw me-1" aria-hidden="true"></i>预计阅读 5 分钟</span>&nbsp;</div>
+    </div><div class="details toc" id="toc-static" data-kept="false">
+        <div class="details-summary toc-title">
+          <span>目录</span>
+          <span><i class="details-icon fa-solid fa-angle-right" aria-hidden="true"></i></span>
+        </div>
+        <div class="details-content toc-content" id="toc-content-static"><nav id="TableOfContents">
+  <ul>
+    <li><a href="#基本概念">基本概念</a></li>
+    <li><a href="#trustedtoauthenticationfordelegation">TrustedToAuthenticationForDelegation</a>
+      <ul>
+        <li><a href="#trusted_to_auth_for_delegation-标志为-true">TRUSTED_TO_AUTH_FOR_DELEGATION 标志为 TRUE</a></li>
+        <li><a href="#trusted_to_auth_for_delegation-标志为-false">TRUSTED_TO_AUTH_FOR_DELEGATION 标志为 FALSE</a></li>
+      </ul>
+    </li>
+    <li><a href="#s4u2self">S4U2self</a></li>
+    <li><a href="#s4u2proxy">S4U2proxy</a></li>
+    <li><a href="#整体流程">整体流程</a></li>
+    <li><a href="#第一个-tgs-req-s4u2self">第一个 TGS-REQ (S4U2self)</a>
+      <ul>
+        <li><a href="#原数据包">原数据包</a>
+          <ul>
+            <li><a href="#整体请求内容">整体请求内容</a></li>
+            <li><a href="#padata">padata</a></li>
+            <li><a href="#req-body">req-body</a></li>
+          </ul>
+        </li>
+        <li><a href="#解密后的数据包">解密后的数据包</a></li>
+      </ul>
+    </li>
+    <li><a href="#第一个-tgs-rep-s4u2self">第一个 TGS-REP (S4U2self)</a>
+      <ul>
+        <li><a href="#原数据包-1">原数据包</a></li>
+        <li><a href="#解密后的数据包-1">解密后的数据包</a></li>
+      </ul>
+    </li>
+    <li><a href="#第二个-tgs-req-s4u2proxy">第二个 TGS-REQ (S4U2proxy)</a>
+      <ul>
+        <li><a href="#原数据包-2">原数据包</a>
+          <ul>
+            <li><a href="#整体请求内容-1">整体请求内容</a></li>
+            <li><a href="#padata-1">padata</a></li>
+            <li><a href="#req-body-1">req-body</a></li>
+          </ul>
+        </li>
+        <li><a href="#解密后的数据包-2">解密后的数据包</a>
+          <ul>
+            <li><a href="#padata-2">padata</a></li>
+            <li><a href="#additional-tickets">additional-tickets</a></li>
+          </ul>
+        </li>
+      </ul>
+    </li>
+    <li><a href="#第二个-tgs-rep-s4u2proxy">第二个 TGS-REP (S4U2proxy)</a>
+      <ul>
+        <li><a href="#原数据包-3">原数据包</a>
+          <ul>
+            <li><a href="#整体请求内容-2">整体请求内容</a></li>
+          </ul>
+        </li>
+        <li><a href="#解密后的数据包-3">解密后的数据包</a></li>
+      </ul>
+    </li>
+    <li><a href="#ap-req">AP-REQ</a>
+      <ul>
+        <li><a href="#原数据包-4">原数据包</a>
+          <ul>
+            <li><a href="#整体请求内容-3">整体请求内容</a></li>
+          </ul>
+        </li>
+        <li><a href="#解密后的数据包-4">解密后的数据包</a>
+          <ul>
+            <li><a href="#ticket">ticket</a></li>
+            <li><a href="#authenticator">authenticator</a></li>
+          </ul>
+        </li>
+      </ul>
+    </li>
+    <li><a href="#ap-rep">AP-REP</a>
+      <ul>
+        <li><a href="#原数据包-5">原数据包</a>
+          <ul>
+            <li><a href="#整体请求内容-4">整体请求内容</a></li>
+          </ul>
+        </li>
+        <li><a href="#解密后的数据包-5">解密后的数据包</a></li>
+      </ul>
+    </li>
+    <li><a href="#参考文章">参考文章</a></li>
+  </ul>
+</nav></div>
+      </div><div class="content" id="content"><p>本文主要记录了通过 WireShark 解开 Kerberos 协议对约束委派进行详细分析.</p>
+<h2 id="基本概念">基本概念</h2>
+<p>微软在 Windows 2003 上发布了约束委派, 其中包括一组 Kerberos 协议扩展: S4U2Self 和 S4U2Proxy.</p>
+<p>需要 SeEnableDelegationPrivilege 权限才能配置约束委派和非约束委派, 约束委派在配置的时候需要<strong>指定允许委派到某个服务</strong>.</p>
+<p>例如:</p>
+<p>WIN-2008$ 配置了到 WEB.missyou.com 的 CIFS 服务的约束委派, 那么 WIN-2008$ 可以模拟成任何用户去请求 WEB.missyou.com 的 CIFS 服务, <strong>且仅能请求该服务</strong>.</p>
+<p><img loading="lazy" src="images/Pasted%20image%2020221206151452.png" srcset="/posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221206151452.png, images/Pasted%20image%2020221206151452.png 1.5x, /posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221206151452.png 2x" sizes="auto" data-title="/posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221206151452.png" data-alt="/posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221206151452.png" width="974" height="1016" style="background: url(/svg/loading.min.svg) no-repeat center;" onload="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}this.dataset.lazyloaded='';" onerror="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}"/></p>
+<p>如果模拟的用户 (PA-FOR-USER 中的用户) 配置了 &ldquo;敏感帐户, 不能被委派&rdquo; 或者为 &ldquo;Protected Users Security Group (受保护的用户安全组)&rdquo; 中的成员, 则返回的 ST 中不包含 FORWARDABLE 标志, <strong>约束委派中 S4U2proxy 阶段需要的 ST 必须是可转发的</strong>.</p>
+<p><img loading="lazy" src="images/Pasted%20image%2020221207112120.png" srcset="/posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221207112120.png, images/Pasted%20image%2020221207112120.png 1.5x, /posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221207112120.png 2x" sizes="auto" data-title="/posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221207112120.png" data-alt="/posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221207112120.png" width="972" height="946" style="background: url(/svg/loading.min.svg) no-repeat center;" onload="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}this.dataset.lazyloaded='';" onerror="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}"/></p>
+<h2 id="trustedtoauthenticationfordelegation">TrustedToAuthenticationForDelegation</h2>
+<p><strong>建议先行阅读 <a href="https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-sfu/c98bade9-cad1-4745-bd4d-d13926103022"target="_blank" rel="external nofollow noopener noreferrer">MS-SFU specification</a> 规范</strong>.</p>
+<p>来看下官网的介绍:</p>
+<blockquote>
+<p><strong>TRUE</strong>: the KDC MUST set the FORWARDABLE <a href="https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-sfu/4a624fb5-a078-4d30-8ad1-e9ab71e0bc47#gt_838d3fe1-e504-4442-93cc-75de14e6f569"target="_blank" rel="external nofollow noopener noreferrer">ticket</a> flag ([RFC4120] section 2.6) in the <a href="https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-sfu/4a624fb5-a078-4d30-8ad1-e9ab71e0bc47#gt_2214804a-4a44-46f4-b6d2-a78f4ff39a39"target="_blank" rel="external nofollow noopener noreferrer">S4U2self</a> service ticket.</p>
+<p><strong>FALSE</strong> and <em>ServicesAllowedToSendForwardedTicketsTo</em> is nonempty: the KDC MUST NOT set the FORWARDABLE ticket flag ([RFC4120] section 2.6) in the S4U2self service ticket.<a href="https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-sfu/a47e0084-d6c3-40ba-8c3c-f1eeb3d85ecf#Appendix_A_16"target="_blank" rel="external nofollow noopener noreferrer">&lt;16&gt;</a></p>
+</blockquote>
+<p>个人理解的是:</p>
+<ul>
+<li>
+<p>如果服务帐户的 TRUSTED_TO_AUTH_FOR_DELEGATION 标志为 TRUE =&gt; 返回 FORWARDABLE 的 ST.</p>
+</li>
+<li>
+<p>如果服务帐户的 TRUSTED_TO_AUTH_FOR_DELEGATION 标志为 FALSE, 并且服务帐户在 msDS-AllowedToDelegateTo 中有服务 =&gt; 返回无 FORWARDABLE 的 ST.</p>
+</li>
+</ul>
+<h3 id="trusted_to_auth_for_delegation-标志为-true">TRUSTED_TO_AUTH_FOR_DELEGATION 标志为 TRUE</h3>
+<p>参考<a href="https://learn.microsoft.com/zh-cn/windows-server/security/group-managed-service-accounts/configure-kerberos-delegation-group-managed-service-accounts"target="_blank" rel="external nofollow noopener noreferrer">官方文档</a> 来设置 TRUSTED_TO_AUTH_FOR_DELEGATION 为 True.</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-PowerShell" data-lang="PowerShell"><span class="line"><span class="cl"><span class="nb">Set-ADAccountControl</span> <span class="n">-Identity</span> <span class="n">win</span><span class="p">-</span><span class="mf">2008</span><span class="p">$</span> <span class="n">-TrustedForDelegation</span> <span class="vm">$false</span> <span class="n">-TrustedToAuthForDelegation</span> <span class="vm">$true</span>
+</span></span></code></pre></div><p><img loading="lazy" src="images/Pasted%20image%2020221202144527.png" srcset="/posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221202144527.png, images/Pasted%20image%2020221202144527.png 1.5x, /posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221202144527.png 2x" sizes="auto" data-title="/posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221202144527.png" data-alt="/posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221202144527.png" width="2408" height="500" style="background: url(/svg/loading.min.svg) no-repeat center;" onload="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}this.dataset.lazyloaded='';" onerror="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}"/></p>
+<p>使用 Rubeus 模拟 S4U2self 请求, 并查看 S4U2self ST 的 Flags.</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-PowerShell" data-lang="PowerShell"><span class="line"><span class="cl"><span class="n">Rubeus</span><span class="p">.</span><span class="py">exe</span> <span class="n">s4u</span> <span class="p">/</span><span class="n">user</span><span class="err">:</span><span class="n">win</span><span class="p">-</span><span class="mf">2008</span><span class="p">$</span> <span class="p">/</span><span class="n">rc4</span><span class="err">:</span><span class="n">2e34c7eac82c4ef73938495c98510401</span> <span class="p">/</span><span class="n">domain</span><span class="err">:</span><span class="n">missyou</span><span class="p">.</span><span class="py">com</span> <span class="p">/</span><span class="n">impersonateuser</span><span class="err">:</span><span class="n">Administrator</span> <span class="p">/</span><span class="n">dc</span><span class="err">:</span><span class="n">dc</span><span class="p">.</span><span class="py">missyou</span><span class="p">.</span><span class="py">com</span> <span class="p">/</span><span class="n">altservice</span><span class="err">:</span><span class="n">CIFS</span><span class="p">/</span><span class="n">web</span><span class="p">.</span><span class="py">missyou</span><span class="p">.</span><span class="py">com</span> <span class="p">/</span><span class="n">outfile</span><span class="err">:</span><span class="n">test3</span><span class="p">.</span><span class="py">kirbi</span> <span class="p">/</span><span class="n">nowrap</span> <span class="p">/</span><span class="n">self</span>
+</span></span><span class="line"><span class="cl"><span class="n">Rubeus</span><span class="p">.</span><span class="py">exe</span> <span class="n">describe</span> <span class="p">/</span><span class="n">ticket</span><span class="err">:</span><span class="n">test3_Administrator_to_HOST</span><span class="nv">@MISSYOU</span><span class="p">.</span><span class="py">COM</span><span class="p">.</span><span class="py">kirbi</span>
+</span></span></code></pre></div><p><img loading="lazy" src="images/Pasted%20image%2020221207140424.png" srcset="/posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221207140424.png, images/Pasted%20image%2020221207140424.png 1.5x, /posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221207140424.png 2x" sizes="auto" data-title="/posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221207140424.png" data-alt="/posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221207140424.png" width="1602" height="826" style="background: url(/svg/loading.min.svg) no-repeat center;" onload="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}this.dataset.lazyloaded='';" onerror="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}"/></p>
+<p>可以看到当 TrustedToAuthForDelegation 为 True 时, KDC 必须在 S4U2self ST 中设置 FORWARDABLE 标志.</p>
+<h3 id="trusted_to_auth_for_delegation-标志为-false">TRUSTED_TO_AUTH_FOR_DELEGATION 标志为 FALSE</h3>
+<p>先来查看 WIN-2008$ 的 TRUSTED_TO_AUTH_FOR_DELEGATION 属性和 msDS-AllowedToDelegateTo 属性.</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-PowerShell" data-lang="PowerShell"><span class="line"><span class="cl"><span class="nb">Get-ADComputer</span> <span class="n">win</span><span class="p">-</span><span class="mf">2008</span> <span class="n">-Properties</span> <span class="n">TrustedToAuthForDelegation</span>
+</span></span><span class="line"><span class="cl"><span class="nb">Get-ADComputer</span> <span class="n">win</span><span class="p">-</span><span class="mf">2008</span> <span class="n">-Properties</span> <span class="nb">msDS-AllowedToDelegateTo</span>
+</span></span></code></pre></div><p><img loading="lazy" src="images/Pasted%20image%2020221202142823.png" srcset="/posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221202142823.png, images/Pasted%20image%2020221202142823.png 1.5x, /posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221202142823.png 2x" sizes="auto" data-title="/posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221202142823.png" data-alt="/posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221202142823.png" width="1796" height="436" style="background: url(/svg/loading.min.svg) no-repeat center;" onload="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}this.dataset.lazyloaded='';" onerror="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}"/></p>
+<p><img loading="lazy" src="images/Pasted%20image%2020221207140018.png" srcset="/posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221207140018.png, images/Pasted%20image%2020221207140018.png 1.5x, /posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221207140018.png 2x" sizes="auto" data-title="/posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221207140018.png" data-alt="/posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221207140018.png" width="1764" height="428" style="background: url(/svg/loading.min.svg) no-repeat center;" onload="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}this.dataset.lazyloaded='';" onerror="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}"/></p>
+<p>使用 Rubeus 模拟 S4U2self 请求, 并查看 S4U2self ST 的 Flags.</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-PowerShell" data-lang="PowerShell"><span class="line"><span class="cl"><span class="n">Rubeus</span><span class="p">.</span><span class="py">exe</span> <span class="n">s4u</span> <span class="p">/</span><span class="n">user</span><span class="err">:</span><span class="n">win</span><span class="p">-</span><span class="mf">2008</span><span class="p">$</span>  <span class="p">/</span><span class="n">rc4</span><span class="err">:</span><span class="n">2e34c7eac82c4ef73938495c98510401</span> <span class="p">/</span><span class="n">domain</span><span class="err">:</span><span class="n">missyou</span><span class="p">.</span><span class="py">com</span> <span class="p">/</span><span class="n">impersonateuser</span><span class="err">:</span><span class="n">Administrator</span> <span class="p">/</span><span class="n">dc</span><span class="err">:</span><span class="n">dc</span><span class="p">.</span><span class="py">missyou</span><span class="p">.</span><span class="py">com</span> <span class="p">/</span><span class="n">altservice</span><span class="err">:</span><span class="n">CIFS</span><span class="p">/</span><span class="n">web</span><span class="p">.</span><span class="py">missyou</span><span class="p">.</span><span class="py">com</span> <span class="p">/</span><span class="n">outfile</span><span class="err">:</span><span class="n">test4</span><span class="p">.</span><span class="py">kirbi</span> <span class="p">/</span><span class="n">nowrap</span> <span class="p">/</span><span class="n">self</span>
+</span></span><span class="line"><span class="cl"><span class="n">Rubeus</span><span class="p">.</span><span class="py">exe</span> <span class="n">describe</span> <span class="p">/</span><span class="n">ticket</span><span class="err">:</span><span class="n">test4_Administrator_to_CIFS</span><span class="nv">@MISSYOU</span><span class="p">.</span><span class="py">COM</span><span class="p">.</span><span class="py">kirbi</span>
+</span></span></code></pre></div><p><img loading="lazy" src="images/Pasted%20image%2020221207135439.png" srcset="/posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221207135439.png, images/Pasted%20image%2020221207135439.png 1.5x, /posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221207135439.png 2x" sizes="auto" data-title="/posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221207135439.png" data-alt="/posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221207135439.png" width="1600" height="818" style="background: url(/svg/loading.min.svg) no-repeat center;" onload="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}this.dataset.lazyloaded='';" onerror="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}"/></p>
+<p>可以看到如果服务帐户的 TRUSTED_TO_AUTH_FOR_DELEGATION 标志为 FALSE, 并且服务帐户在 msDS-AllowedToDelegateTo 中有服务, KDC 会返回无 FORWARDABLE 的 ST.</p>
+<h2 id="s4u2self">S4U2self</h2>
+<p><strong>建议先行阅读 <a href="https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-sfu/c98bade9-cad1-4745-bd4d-d13926103022"target="_blank" rel="external nofollow noopener noreferrer">MS-SFU specification</a> 规范</strong>.</p>
+<p>Kerberos S4U2self 扩展允许一个服务以用户的名义为自己请求一个 ST, 即允许服务模拟用户向自己请求 ST, 并在 S4U2proxy 中使用.</p>
+<p>这样做的目的是为了让那些不支持 Kerberos 协议的客户端能够执行 Kerberos 委派, 这也被称为<strong>协议转换</strong>.</p>
+<p><strong>在域内任何具有 SPN 的主体都可以发起 S4U2self 请求</strong>, 下面简单介绍 KDC 在收到 S4U2self 请求时进行的检查:</p>
+<ul>
+<li>如果服务帐户没有任何服务 =&gt; 返回错误 KDC-ERR-S-PRINCIPAL-UNKNOWN.</li>
+<li>如果模拟的帐户 (PA-FOR-USER 中的帐户) 配置了 &ldquo;敏感帐户, 不能被委派&rdquo; 或者为 &ldquo;Protected Users Security Group (受保护的用户安全组)&rdquo; 中的成员 =&gt; 返回无 FORWARDABLE 的 ST.</li>
+<li>如果服务帐户的 TRUSTED_TO_AUTH_FOR_DELEGATION 标志为 TRUE =&gt; 返回 FORWARDABLE ST.</li>
+<li>如果服务帐户的 TRUSTED_TO_AUTH_FOR_DELEGATION 标志为 FALSE, 并且服务帐户在 msDS-AllowedToDelegateTo 中有服务 =&gt; 返回无 FORWARDABLE 标志的 ST.</li>
+</ul>
+<p>来举个例子:</p>
+<pre tabindex="0"><code>                                                                KDC
+                          .---. &gt;---2) TGS-REQ--------------&gt;  .---.
+                         /   /|     + SPN: HTTP/websrv        /   /|
+  ____                  .---. |     + For user: client       .---. |
+ |    | &gt;-1) SPNEGO--&gt;  |   | &#39;     + TGT websrv$            |   | &#39;
+ |____|     (NTLM)      |   |/                               |   |/ 
+ /::::/                 &#39;---&#39;  &lt;----3) TGS-REP-------------&lt; &#39;---&#39;  
+ client                websrv   + ST client &gt; HTTP/websrv
+</code></pre><ol>
+<li>由于 HTTP/websrv 服务不支持 Kerberos 协议, 所以客户端将通过 NTLM (或其他认证协议) 对其进行身份验证.</li>
+<li>websrv 通过向 KDC 发送 TGS-REQ 来为客户端请求 S4U2self ST.</li>
+<li>KDC 将检查 websrv$ 的 TRUSTED_TO_AUTH_FOR_DELEGATION 标志以及 FOR-USER (此处为 client) 是否受到保护而无法进行委派, 如果一切正常, KDC将为客户端返回一个 HTTP/websrv ST, 这个 ST 可能是 FORWARDABLE, 也可能不是, 具体取决于前面提到的变量.</li>
+</ol>
+<h2 id="s4u2proxy">S4U2proxy</h2>
+<p>S4U2proxy 拓展的作用是:</p>
+<p>使用 WIN-2008$ 的 TGT 模拟 Administrator 用户去向 KDC 请求一张用于访问 WEB.missyou.com 的 CIFS 服务的 ST, S4U2self 阶段获取到的 ST 将作为 TGS-REQ 的 additional-tickets 字段一起发送给 KDC.</p>
+<p>在 S4U2proxy 阶段, KDC 会检查 WIN-2008$ 的 msDS-AllowedToDelegateTo 属性, 检查 WEB.missyou.com 的 CIFS 服务是否在该属性中, 如果验证成功, 则返回 ST.</p>
+<h2 id="整体流程">整体流程</h2>
+<ol>
+<li>WIN-2008$ 以 WIN-2008$ NT Hash 加密时间戳并设置可转发的字段向 KDC 申请可转发的 TGT (不仅是约束委派, 正常的 TGT 申请都会带上可转发字段, 并且返回的TGT 也是可转发的).</li>
+<li><strong>S4U2self</strong>: WIN-2008$ 携带可转发的 TGT 并使用 S4U2self 扩展模拟用户 Administrator 获得针对 WIN-2008$ 自身的可转发的 ST, <strong>S4U2Self 阶段不需要 Administrator 的凭据</strong>.</li>
+<li><strong>S4U2proxy</strong>: WIN-2008$ 携带步骤 1 申请到的 TGT 和步骤 2 获取的可转发的 ST (S4U2self ST) 发送给 KDC, 请求模拟 Administrator 用户访问 WEB.missyou.com 的 CIFS 服务的 ST.</li>
+<li>WIN-2008$ 拿着步骤 3 获取的 ST (S4U2proxy ST) 模拟用户 Administrator 向 WEB.missyou.com 的 CIFS 服务发起请求.</li>
+</ol>
+<p>使用 rubeus 模拟约束委派请求:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-PowerShell" data-lang="PowerShell"><span class="line"><span class="cl"><span class="n">Rubeus</span><span class="p">.</span><span class="py">exe</span> <span class="n">s4u</span> <span class="p">/</span><span class="n">outfile</span><span class="err">:</span><span class="n">1a</span><span class="p">.</span><span class="py">kirbi</span> <span class="p">/</span><span class="n">user</span><span class="err">:</span><span class="n">win</span><span class="p">-</span><span class="mf">2008</span><span class="p">$</span>  <span class="p">/</span><span class="n">rc4</span><span class="err">:</span><span class="n">2e34c7eac82c4ef73938495c98510401</span> <span class="p">/</span><span class="n">impersonateuser</span><span class="err">:</span><span class="n">administrator</span> <span class="p">/</span><span class="n">msdsspn</span><span class="err">:</span><span class="n">CIFS</span><span class="p">/</span><span class="n">web</span><span class="p">.</span><span class="py">missyou</span><span class="p">.</span><span class="py">com</span> <span class="p">/</span><span class="n">ptt</span>
+</span></span><span class="line"><span class="cl"><span class="nb">dir </span><span class="p">\\</span><span class="n">web</span><span class="p">.</span><span class="py">missyou</span><span class="p">.</span><span class="n">com</span><span class="p">\</span><span class="n">c</span><span class="p">$</span>
+</span></span></code></pre></div><p>WireShark 抓包:</p>
+<p><img loading="lazy" src="images/Pasted%20image%2020221205172253.png" srcset="/posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221205172253.png, images/Pasted%20image%2020221205172253.png 1.5x, /posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221205172253.png 2x" sizes="auto" data-title="/posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221205172253.png" data-alt="/posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221205172253.png" width="1632" height="412" style="background: url(/svg/loading.min.svg) no-repeat center;" onload="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}this.dataset.lazyloaded='';" onerror="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}"/></p>
+<p>AS-REQ 与 AS-REP 就是正常的用 WIN-2008$ 凭据去申请 TGT, 和之前的文章 <a href="https://trya9ain.github.io/kerberos%E8%AE%A4%E8%AF%81%E8%BF%87%E7%A8%8B%E5%88%86%E6%9E%90/"target="_blank" rel="external nofollow noopener noreferrer">Kerberos 认证过程分析</a> 的内容差不多就不细说了.</p>
+<h2 id="第一个-tgs-req-s4u2self">第一个 TGS-REQ (S4U2self)</h2>
+<p>第一个 TGS-REQ 就是通过 S4U2self 扩展模拟 administrator 用户获取 WIN-2008$ 的 ST.</p>
+<h3 id="原数据包">原数据包</h3>
+<h4 id="整体请求内容">整体请求内容</h4>
+<p><img loading="lazy" src="images/Pasted%20image%2020221205220206.png" srcset="/posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221205220206.png, images/Pasted%20image%2020221205220206.png 1.5x, /posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221205220206.png 2x" sizes="auto" data-title="/posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221205220206.png" data-alt="/posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221205220206.png" width="504" height="194" style="background: url(/svg/loading.min.svg) no-repeat center;" onload="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}this.dataset.lazyloaded='';" onerror="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}"/></p>
+<h4 id="padata">padata</h4>
+<p><img loading="lazy" src="images/Pasted%20image%2020221205221132.png" srcset="/posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221205221132.png, images/Pasted%20image%2020221205221132.png 1.5x, /posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221205221132.png 2x" sizes="auto" data-title="/posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221205221132.png" data-alt="/posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221205221132.png" width="1564" height="832" style="background: url(/svg/loading.min.svg) no-repeat center;" onload="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}this.dataset.lazyloaded='';" onerror="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}"/></p>
+<p>PA-DATA pA-TGS-REQ: 这部分包含了 WIN-2008$ 的 TGT 和 Logon session key 加密的时间戳等信息.</p>
+<p>PA-DATA pA-FOR-USER: 此结构标识模拟的用户 administrator 以及域名 MISSYOU.com.</p>
+<h4 id="req-body">req-body</h4>
+<p>可以看到 CName 是 win-2008$, SName 也是 win-2008$.</p>
+<p><img loading="lazy" src="images/Pasted%20image%2020221205221329.png" srcset="/posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221205221329.png, images/Pasted%20image%2020221205221329.png 1.5x, /posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221205221329.png 2x" sizes="auto" data-title="/posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221205221329.png" data-alt="/posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221205221329.png" width="826" height="690" style="background: url(/svg/loading.min.svg) no-repeat center;" onload="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}this.dataset.lazyloaded='';" onerror="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}"/></p>
+<h3 id="解密后的数据包">解密后的数据包</h3>
+<p>主要看下此处 TGT 中的 PAC 信息, 可以看到当前 PAC 还是 WIN-2008$ 权限, Group RID: 515 (Domain Computers 组).</p>
+<p><img loading="lazy" src="images/Pasted%20image%2020221207172039.png" srcset="/posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221207172039.png, images/Pasted%20image%2020221207172039.png 1.5x, /posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221207172039.png 2x" sizes="auto" data-title="/posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221207172039.png" data-alt="/posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221207172039.png" width="1002" height="1002" style="background: url(/svg/loading.min.svg) no-repeat center;" onload="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}this.dataset.lazyloaded='';" onerror="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}"/></p>
+<h2 id="第一个-tgs-rep-s4u2self">第一个 TGS-REP (S4U2self)</h2>
+<h3 id="原数据包-1">原数据包</h3>
+<p>注意此处的 CName 已经变成了 administrator.</p>
+<p><img loading="lazy" src="images/Pasted%20image%2020221205222708.png" srcset="/posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221205222708.png, images/Pasted%20image%2020221205222708.png 1.5x, /posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221205222708.png 2x" sizes="auto" data-title="/posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221205222708.png" data-alt="/posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221205222708.png" width="1482" height="800" style="background: url(/svg/loading.min.svg) no-repeat center;" onload="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}this.dataset.lazyloaded='';" onerror="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}"/></p>
+<h3 id="解密后的数据包-1">解密后的数据包</h3>
+<p>这里重点关注此处的 ST 中的 PAC 权限变成了 Administrator.</p>
+<ul>
+<li>Group RID: 512, Domain Admins.</li>
+<li>Group RID: 520, Group Policy Creator Owners.</li>
+<li>Group RID: 513, Domain Users.</li>
+<li>Group RID: 519, Enterprise Admins.</li>
+<li>Group RID: 518, Schema Admins.</li>
+</ul>
+<p><img loading="lazy" src="images/Pasted%20image%2020221207172228.png" srcset="/posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221207172228.png, images/Pasted%20image%2020221207172228.png 1.5x, /posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221207172228.png 2x" sizes="auto" data-title="/posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221207172228.png" data-alt="/posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221207172228.png" width="1036" height="1482" style="background: url(/svg/loading.min.svg) no-repeat center;" onload="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}this.dataset.lazyloaded='';" onerror="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}"/></p>
+<h2 id="第二个-tgs-req-s4u2proxy">第二个 TGS-REQ (S4U2proxy)</h2>
+<p>第二个 TGS-REQ 请求就是通过 S4U2proxy 扩展模拟 administrator 用户获取 WEB.missyou.com 的 CIFS 服务的 ST.</p>
+<h3 id="原数据包-2">原数据包</h3>
+<h4 id="整体请求内容-1">整体请求内容</h4>
+<p><img loading="lazy" src="images/Pasted%20image%2020221206141623.png" srcset="/posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221206141623.png, images/Pasted%20image%2020221206141623.png 1.5x, /posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221206141623.png 2x" sizes="auto" data-title="/posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221206141623.png" data-alt="/posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221206141623.png" width="506" height="188" style="background: url(/svg/loading.min.svg) no-repeat center;" onload="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}this.dataset.lazyloaded='';" onerror="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}"/></p>
+<h4 id="padata-1">padata</h4>
+<p>注意这里的 ticket 是 WIN-2008$ 的 TGT (后续解包会看到).</p>
+<p><img loading="lazy" src="images/Pasted%20image%2020221206141822.png" srcset="/posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221206141822.png, images/Pasted%20image%2020221206141822.png 1.5x, /posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221206141822.png 2x" sizes="auto" data-title="/posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221206141822.png" data-alt="/posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221206141822.png" width="1618" height="1304" style="background: url(/svg/loading.min.svg) no-repeat center;" onload="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}this.dataset.lazyloaded='';" onerror="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}"/></p>
+<h4 id="req-body-1">req-body</h4>
+<p>可以看到多出来了一个 additional-tickets 字段, 这个字段的 ticket 就是 S4U2self 获取到的 ST (必须是有可转发字段的).</p>
+<p><img loading="lazy" src="images/Pasted%20image%2020221206142109.png" srcset="/posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221206142109.png, images/Pasted%20image%2020221206142109.png 1.5x, /posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221206142109.png 2x" sizes="auto" data-title="/posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221206142109.png" data-alt="/posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221206142109.png" width="1502" height="1016" style="background: url(/svg/loading.min.svg) no-repeat center;" onload="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}this.dataset.lazyloaded='';" onerror="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}"/></p>
+<h3 id="解密后的数据包-2">解密后的数据包</h3>
+<h4 id="padata-2">padata</h4>
+<p>主要来看下 TGT 的解密, 重点关注 PAC 中的信息, 可以看到当前的权限是 WIN-2008$, 不是 Administrator 哦.</p>
+<p><img loading="lazy" src="images/Pasted%20image%2020221206142955.png" srcset="/posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221206142955.png, images/Pasted%20image%2020221206142955.png 1.5x, /posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221206142955.png 2x" sizes="auto" data-title="/posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221206142955.png" data-alt="/posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221206142955.png" width="2386" height="1320" style="background: url(/svg/loading.min.svg) no-repeat center;" onload="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}this.dataset.lazyloaded='';" onerror="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}"/></p>
+<p><img loading="lazy" src="images/Pasted%20image%2020221206143345.png" srcset="/posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221206143345.png, images/Pasted%20image%2020221206143345.png 1.5x, /posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221206143345.png 2x" sizes="auto" data-title="/posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221206143345.png" data-alt="/posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221206143345.png" width="1016" height="1162" style="background: url(/svg/loading.min.svg) no-repeat center;" onload="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}this.dataset.lazyloaded='';" onerror="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}"/></p>
+<h4 id="additional-tickets">additional-tickets</h4>
+<p>这个字段的 ticket 就是 S4U2self 获取到的 ST (必须是有可转发字段的).可以看到跟之前 S4U2self TGS-REQ 中的 ST 是一样的.</p>
+<p><img loading="lazy" src="images/Pasted%20image%2020221206144300.png" srcset="/posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221206144300.png, images/Pasted%20image%2020221206144300.png 1.5x, /posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221206144300.png 2x" sizes="auto" data-title="/posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221206144300.png" data-alt="/posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221206144300.png" width="2486" height="1320" style="background: url(/svg/loading.min.svg) no-repeat center;" onload="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}this.dataset.lazyloaded='';" onerror="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}"/></p>
+<p><img loading="lazy" src="images/Pasted%20image%2020221206144620.png" srcset="/posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221206144620.png, images/Pasted%20image%2020221206144620.png 1.5x, /posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221206144620.png 2x" sizes="auto" data-title="/posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221206144620.png" data-alt="/posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221206144620.png" width="1004" height="1478" style="background: url(/svg/loading.min.svg) no-repeat center;" onload="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}this.dataset.lazyloaded='';" onerror="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}"/></p>
+<h2 id="第二个-tgs-rep-s4u2proxy">第二个 TGS-REP (S4U2proxy)</h2>
+<h3 id="原数据包-3">原数据包</h3>
+<h4 id="整体请求内容-2">整体请求内容</h4>
+<p><img loading="lazy" src="images/Pasted%20image%2020221206144801.png" srcset="/posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221206144801.png, images/Pasted%20image%2020221206144801.png 1.5x, /posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221206144801.png 2x" sizes="auto" data-title="/posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221206144801.png" data-alt="/posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221206144801.png" width="504" height="258" style="background: url(/svg/loading.min.svg) no-repeat center;" onload="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}this.dataset.lazyloaded='';" onerror="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}"/></p>
+<ul>
+<li>
+<p>ticket: 这个就是 ST, 由服务账号的 NT Hash 加密.</p>
+</li>
+<li>
+<p>enc-part: Logon session key 加密的 Server Session key 等信息.</p>
+</li>
+</ul>
+<p>可以看到是 administrator 请求 WEB.missyou.com 的 CIFS 服务.</p>
+<p><img loading="lazy" src="images/Pasted%20image%2020221206144954.png" srcset="/posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221206144954.png, images/Pasted%20image%2020221206144954.png 1.5x, /posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221206144954.png 2x" sizes="auto" data-title="/posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221206144954.png" data-alt="/posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221206144954.png" width="1478" height="834" style="background: url(/svg/loading.min.svg) no-repeat center;" onload="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}this.dataset.lazyloaded='';" onerror="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}"/></p>
+<h3 id="解密后的数据包-3">解密后的数据包</h3>
+<p>可以看到是用 WEB$ 服务账号信息解密的.</p>
+<p>重点关注此处的 ST 中的 PAC 权限为 administrator.</p>
+<p><img loading="lazy" src="images/Pasted%20image%2020221206145409.png" srcset="/posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221206145409.png, images/Pasted%20image%2020221206145409.png 1.5x, /posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221206145409.png 2x" sizes="auto" data-title="/posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221206145409.png" data-alt="/posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221206145409.png" width="1828" height="1208" style="background: url(/svg/loading.min.svg) no-repeat center;" onload="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}this.dataset.lazyloaded='';" onerror="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}"/></p>
+<p><img loading="lazy" src="images/Pasted%20image%2020221206150224.png" srcset="/posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221206150224.png, images/Pasted%20image%2020221206150224.png 1.5x, /posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221206150224.png 2x" sizes="auto" data-title="/posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221206150224.png" data-alt="/posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221206150224.png" width="996" height="1476" style="background: url(/svg/loading.min.svg) no-repeat center;" onload="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}this.dataset.lazyloaded='';" onerror="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}"/></p>
+<h2 id="ap-req">AP-REQ</h2>
+<p>用户解密 Logon session key 加密的内容, 获得 Server Session key, 然后把用户名, 时间戳等信息用 Server Session key 加密, 同 ST 发送给目标服务.</p>
+<h3 id="原数据包-4">原数据包</h3>
+<h4 id="整体请求内容-3">整体请求内容</h4>
+<p><img loading="lazy" src="images/Pasted%20image%2020221208101110.png" srcset="/posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221208101110.png, images/Pasted%20image%2020221208101110.png 1.5x, /posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221208101110.png 2x" sizes="auto" data-title="/posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221208101110.png" data-alt="/posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221208101110.png" width="1642" height="874" style="background: url(/svg/loading.min.svg) no-repeat center;" onload="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}this.dataset.lazyloaded='';" onerror="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}"/></p>
+<p>主要看 Kerberos.</p>
+<p><img loading="lazy" src="images/Pasted%20image%2020221208095535.png" srcset="/posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221208095535.png, images/Pasted%20image%2020221208095535.png 1.5x, /posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221208095535.png 2x" sizes="auto" data-title="/posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221208095535.png" data-alt="/posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221208095535.png" width="1508" height="866" style="background: url(/svg/loading.min.svg) no-repeat center;" onload="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}this.dataset.lazyloaded='';" onerror="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}"/></p>
+<ul>
+<li>
+<p>ticket: 这里的 ticket 字段就是 ST.</p>
+</li>
+<li>
+<p>authenticator: 就是 Server Session Key 加密的客户端信息</p>
+</li>
+</ul>
+<h3 id="解密后的数据包-4">解密后的数据包</h3>
+<h4 id="ticket">ticket</h4>
+<p>可以看到使用 WEB$ 帐户信息解密 ST, 解密出 bcf9a2a9 开头的 Server Session key, PAC, 时间戳等信息.</p>
+<p>此处的 PAC 权限为 Administrator.</p>
+<p><img loading="lazy" src="images/Pasted%20image%2020221208100125.png" srcset="/posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221208100125.png, images/Pasted%20image%2020221208100125.png 1.5x, /posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221208100125.png 2x" sizes="auto" data-title="/posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221208100125.png" data-alt="/posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221208100125.png" width="1820" height="1244" style="background: url(/svg/loading.min.svg) no-repeat center;" onload="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}this.dataset.lazyloaded='';" onerror="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}"/></p>
+<p><img loading="lazy" src="images/Pasted%20image%2020221208100431.png" srcset="/posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221208100431.png, images/Pasted%20image%2020221208100431.png 1.5x, /posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221208100431.png 2x" sizes="auto" data-title="/posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221208100431.png" data-alt="/posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221208100431.png" width="992" height="1484" style="background: url(/svg/loading.min.svg) no-repeat center;" onload="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}this.dataset.lazyloaded='';" onerror="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}"/></p>
+<h4 id="authenticator">authenticator</h4>
+<p>可看到使用 bcf9a2a9 开头的 Server Session key 解密 authenticator.</p>
+<p><img loading="lazy" src="images/Pasted%20image%2020221208100821.png" srcset="/posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221208100821.png, images/Pasted%20image%2020221208100821.png 1.5x, /posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221208100821.png 2x" sizes="auto" data-title="/posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221208100821.png" data-alt="/posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221208100821.png" width="2300" height="1240" style="background: url(/svg/loading.min.svg) no-repeat center;" onload="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}this.dataset.lazyloaded='';" onerror="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}"/></p>
+<h2 id="ap-rep">AP-REP</h2>
+<h3 id="原数据包-5">原数据包</h3>
+<h4 id="整体请求内容-4">整体请求内容</h4>
+<p>服务器收到用户发来的 ST 后, 用自己的 NT Hash 解密 ST 获得 Server Session key, 再用该 Server Session key 解密被加密的客户端信息 (请求的用户名、时间戳等), 并进行校验以及与 ST 中的客户端信息进行比对, 相同则认证通过.</p>
+<p><img loading="lazy" src="images/Pasted%20image%2020221208101217.png" srcset="/posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221208101217.png, images/Pasted%20image%2020221208101217.png 1.5x, /posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221208101217.png 2x" sizes="auto" data-title="/posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221208101217.png" data-alt="/posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221208101217.png" width="1704" height="728" style="background: url(/svg/loading.min.svg) no-repeat center;" onload="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}this.dataset.lazyloaded='';" onerror="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}"/></p>
+<p><img loading="lazy" src="images/Pasted%20image%2020221208101326.png" srcset="/posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221208101326.png, images/Pasted%20image%2020221208101326.png 1.5x, /posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221208101326.png 2x" sizes="auto" data-title="/posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221208101326.png" data-alt="/posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221208101326.png" width="1480" height="260" style="background: url(/svg/loading.min.svg) no-repeat center;" onload="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}this.dataset.lazyloaded='';" onerror="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}"/></p>
+<h3 id="解密后的数据包-5">解密后的数据包</h3>
+<p>可看到使用 bcf9a2a9 开头的 Server Session key 解密 authenticator.</p>
+<p><img loading="lazy" src="images/Pasted%20image%2020221208101609.png" srcset="/posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221208101609.png, images/Pasted%20image%2020221208101609.png 1.5x, /posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221208101609.png 2x" sizes="auto" data-title="/posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221208101609.png" data-alt="/posts/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/images/Pasted%20image%2020221208101609.png" width="2140" height="1520" style="background: url(/svg/loading.min.svg) no-repeat center;" onload="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}this.dataset.lazyloaded='';" onerror="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}"/></p>
+<p><strong>感谢耐心阅读, 文章仅供参考, 本人学艺不精, 不足之处欢迎师傅们指点和纠正!</strong></p>
+<h2 id="参考文章">参考文章</h2>
+<p><a href="https://myzxcg.com/2021/08/Kerberos-%E8%AE%A4%E8%AF%81%E8%BF%87%E7%A8%8B%E8%AF%A6%E7%BB%86%E5%88%86%E6%9E%90%E4%BA%8C/"target="_blank" rel="external nofollow noopener noreferrer">Kerberos 认证过程详细分析（二）</a></p>
+<p><a href="https://zer1t0.gitlab.io/posts/attacking_ad/"target="_blank" rel="external nofollow noopener noreferrer">Attacking Active Directory: 0 to 0.9</a></p>
+</div><div class="post-footer" id="post-footer">
+  <div class="post-info">
+    <div class="post-info-line">
+      <div class="post-info-mod">
+        <span title="更新于 2022-11-24 17:37:22">更新于 2022-11-24&nbsp;</span>
+      </div></div>
+    <div class="post-info-line">
+      <div class="post-info-md"></div>
+      <div class="post-info-share">
+        <span></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="post-info-more">
+    <section class="post-tags"><i class="fa-solid fa-tags fa-fw me-1" aria-hidden="true"></i><a href='/tags/%E5%9F%9F%E6%B8%97%E9%80%8F/' class="post-tag">域渗透</a></section>
+    <section>
+      <span><a href="javascript:void(0);" onclick="window.history.back();">返回</a></span>&nbsp;|&nbsp;<span><a href="/">主页</a></span>
+    </section>
+  </div>
+
+  <div class="post-nav"><a href="/posts/kali-linux-2022.1-%E5%AE%89%E8%A3%85-parallels-tools/" class="post-nav-item" rel="prev" title="Kali Linux 2022.2 安装 Parallels Tools"><i class="fa-solid fa-angle-left fa-fw" aria-hidden="true"></i>Kali Linux 2022.2 安装 Parallels Tools</a>
+      <a href="/posts/kerberos%E8%AE%A4%E8%AF%81%E8%BF%87%E7%A8%8B%E5%88%86%E6%9E%90/" class="post-nav-item" rel="next" title="Kerberos 认证过程分析">Kerberos 认证过程分析<i class="fa-solid fa-angle-right fa-fw" aria-hidden="true"></i></a></div>
+</div>
+</article></main></div><div class="widgets"><div class="fixed-buttons animate__faster d-none"><div class="fixed-button back-to-top" role="button" aria-label="回到顶部"><i class="fa-solid fa-arrow-up fa-fw" aria-hidden="true"></i><span class="variant-numeric d-none">0%</span>
+        </div></div><div id="mask"></div><noscript>
+    <div class="noscript-warning">FixIt 主题在启用 JavaScript 的情况下效果最佳。</div>
+  </noscript>
+</div><link rel="stylesheet" href="/lib/cookieconsent/cookieconsent.min.css"><script src="/lib/cookieconsent/cookieconsent.min.js" defer></script><script>window.config={"code":{"copyTitle":"复制到剪贴板","editLockTitle":"锁定可编辑代码块","editUnLockTitle":"解锁可编辑代码块","editable":true,"maxShownLines":10},"comment":{"enable":false},"cookieconsent":{"content":{"dismiss":"同意","link":"了解更多","message":"本网站使用 Cookies 来改善您的浏览体验。"},"enable":true,"palette":{"button":{"background":"#f0f0f0"},"popup":{"background":"#1aa3ff"}},"theme":"edgeless"}};</script><script src="/js/theme.min.js" defer></script></body>
+</html>

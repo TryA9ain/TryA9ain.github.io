@@ -1,0 +1,15 @@
+<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0">
+  <channel>
+    <title>学习中遇到的一些问题 - 分类 - TryA9ain-Blog</title>
+    <link>https://TryA9ain.github.io/categories/%E5%AD%A6%E4%B9%A0%E4%B8%AD%E9%81%87%E5%88%B0%E7%9A%84%E4%B8%80%E4%BA%9B%E9%97%AE%E9%A2%98/</link>
+    <description>学习中遇到的一些问题 - 分类 - TryA9ain-Blog</description>
+    <generator>Hugo -- gohugo.io</generator><language>zh-CN</language><lastBuildDate>Tue, 22 Nov 2022 16:12:22 &#43;0800</lastBuildDate><atom:link href="https://TryA9ain.github.io/categories/%E5%AD%A6%E4%B9%A0%E4%B8%AD%E9%81%87%E5%88%B0%E7%9A%84%E4%B8%80%E4%BA%9B%E9%97%AE%E9%A2%98/" rel="self" type="application/rss+xml" /><item>
+  <title>Kali Linux 2022.2 安装 Parallels Tools</title>
+  <link>https://TryA9ain.github.io/posts/kali-linux-2022.1-%E5%AE%89%E8%A3%85-parallels-tools/</link>
+  <pubDate>Tue, 22 Nov 2022 16:12:22 &#43;0800</pubDate>
+  <author>TryA9ain</author>
+  <guid>https://TryA9ain.github.io/posts/kali-linux-2022.1-%E5%AE%89%E8%A3%85-parallels-tools/</guid>
+  <description><![CDATA[闲来无事, 一直听说 MAC 上 PD 虚拟机很丝滑, 就想上手体验一下, 但在安装 Kali 时遇到了一些问题, 就有了此文. 软件版本 Kali: 2022.1-amd64 Parallels Desktop: 17.1.4 macOS: Catalina 10.15.7 版本问题 在逛 pd 的论坛]]></description>
+</item>
+</channel>
+</rss>

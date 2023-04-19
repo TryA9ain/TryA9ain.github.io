@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+  <head>
+    
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+    <meta name="robots" content="noodp" />
+    <title>通过 Kerberos Pre-Authentication 进行域用户帐户枚举和口令爆破 - TryA9ain-Blog</title><meta name="author" content="TryA9ain">
+<meta name="author-link" content="">
+<meta name="description" content="本文主要记录了通过 Kerberos Pre-Authentication 进行域用户帐户枚举和口令爆破." /><meta name="keywords" content='域渗透' /><meta itemprop="name" content="通过 Kerberos Pre-Authentication 进行域用户帐户枚举和口令爆破">
+<meta itemprop="description" content="本文主要记录了通过 Kerberos Pre-Authentication 进行域用户帐户枚举和口令爆破."><meta itemprop="datePublished" content="2023-03-07T13:37:22+08:00" />
+<meta itemprop="dateModified" content="2023-03-07T13:37:22+08:00" />
+<meta itemprop="wordCount" content="1088">
+<meta itemprop="keywords" content="域渗透," /><meta property="og:title" content="通过 Kerberos Pre-Authentication 进行域用户帐户枚举和口令爆破" />
+<meta property="og:description" content="本文主要记录了通过 Kerberos Pre-Authentication 进行域用户帐户枚举和口令爆破." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://TryA9ain.github.io/posts/%E9%80%9A%E8%BF%87-kerberos-pre-authentication-%E8%BF%9B%E8%A1%8C%E7%94%A8%E6%88%B7%E6%9E%9A%E4%B8%BE%E5%92%8C%E5%8F%A3%E4%BB%A4%E7%88%86%E7%A0%B4/" /><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2023-03-07T13:37:22+08:00" />
+<meta property="article:modified_time" content="2023-03-07T13:37:22+08:00" />
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="通过 Kerberos Pre-Authentication 进行域用户帐户枚举和口令爆破"/>
+<meta name="twitter:description" content="本文主要记录了通过 Kerberos Pre-Authentication 进行域用户帐户枚举和口令爆破."/>
+<meta name="application-name" content="FixIt">
+<meta name="apple-mobile-web-app-title" content="FixIt"><meta name="theme-color" data-light="#f8f8f8" data-dark="#252627" content="#f8f8f8"><meta name="msapplication-TileColor" content="#da532c"><link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5"><link rel="canonical" href="https://TryA9ain.github.io/posts/%E9%80%9A%E8%BF%87-kerberos-pre-authentication-%E8%BF%9B%E8%A1%8C%E7%94%A8%E6%88%B7%E6%9E%9A%E4%B8%BE%E5%92%8C%E5%8F%A3%E4%BB%A4%E7%88%86%E7%A0%B4/" /><link rel="prev" href="https://TryA9ain.github.io/posts/maq-0-%E7%9A%84%E7%AA%81%E7%A0%B4/" /><link rel="next" href="https://TryA9ain.github.io/posts/%E6%9E%9A%E4%B8%BE%E5%9F%9F%E5%86%85%E8%AE%A1%E7%AE%97%E6%9C%BA%E4%B8%8A%E7%99%BB%E5%BD%95%E7%9A%84%E7%94%A8%E6%88%B7/" /><link rel="stylesheet" href="/css/style.min.css"><link rel="stylesheet" href="/lib/fontawesome-free/all.min.css"><link rel="stylesheet" href="/lib/animate/animate.min.css"><script type="application/ld+json">
+  {
+    "@context": "http://schema.org",
+    "@type": "BlogPosting",
+    "headline": "通过 Kerberos Pre-Authentication 进行域用户帐户枚举和口令爆破",
+    "inLanguage": "zh-CN",
+    "mainEntityOfPage": {
+      "@type": "WebPage",
+      "@id": "https:\/\/TryA9ain.github.io\/posts\/%E9%80%9A%E8%BF%87-kerberos-pre-authentication-%E8%BF%9B%E8%A1%8C%E7%94%A8%E6%88%B7%E6%9E%9A%E4%B8%BE%E5%92%8C%E5%8F%A3%E4%BB%A4%E7%88%86%E7%A0%B4\/"
+    },"genre": "posts","keywords": "域渗透","wordcount":  1088 ,
+    "url": "https:\/\/TryA9ain.github.io\/posts\/%E9%80%9A%E8%BF%87-kerberos-pre-authentication-%E8%BF%9B%E8%A1%8C%E7%94%A8%E6%88%B7%E6%9E%9A%E4%B8%BE%E5%92%8C%E5%8F%A3%E4%BB%A4%E7%88%86%E7%A0%B4\/","datePublished": "2023-03-07T13:37:22+08:00","dateModified": "2023-03-07T13:37:22+08:00","publisher": {
+      "@type": "Organization",
+      "name": ""},"author": {
+        "@type": "Person",
+        "name": "TryA9ain"
+      },"description": ""
+  }
+  </script></head>
+  <body data-header-desktop="sticky" data-header-mobile="auto"><script>(window.localStorage?.getItem('theme') ? localStorage.getItem('theme') === 'dark' : ('auto' === 'auto' ? window.matchMedia('(prefers-color-scheme: dark)').matches : 'auto' === 'dark')) && document.body.setAttribute('data-theme', 'dark');</script><div class="wrapper" data-page-style="normal"><header class="desktop animate__faster" id="header-desktop">
+  <div class="header-wrapper">
+    <div class="header-title">
+      <a href="/" title="TryA9ain-Blog"><span class="header-title-text">TryA9ain</span></a><span class="header-subtitle"></span></div>
+    <nav>
+      <ul class="menu"><li class="menu-item">
+              <a
+                class="menu-link"
+                href="/posts/"
+                
+                
+              >文章</a></li><li class="menu-item">
+              <a
+                class="menu-link"
+                href="/categories/"
+                
+                
+              >分类</a></li><li class="menu-item">
+              <a
+                class="menu-link"
+                href="/tags/"
+                
+                
+              >标签</a></li><li class="menu-item delimiter"></li><li class="menu-item theme-switch" title="切换主题">
+          <i class="fa-solid fa-adjust fa-fw" aria-hidden="true"></i>
+        </li></ul>
+    </nav>
+  </div>
+</header><header class="mobile animate__faster" id="header-mobile">
+  <div class="header-container">
+    <div class="header-wrapper">
+      <div class="header-title">
+        <a href="/" title="TryA9ain-Blog"><span class="header-title-text">TryA9ain</span></a><span class="header-subtitle"></span></div>
+      <div class="menu-toggle" id="menu-toggle-mobile">
+        <span></span><span></span><span></span>
+      </div>
+    </div>
+    <nav>
+      <ul class="menu" id="menu-mobile"><li
+              class="menu-item"
+            ><a
+                  class="menu-link"
+                  href="/posts/"
+                  
+                  
+                >文章</a></li><li
+              class="menu-item"
+            ><a
+                  class="menu-link"
+                  href="/categories/"
+                  
+                  
+                >分类</a></li><li
+              class="menu-item"
+            ><a
+                  class="menu-link"
+                  href="/tags/"
+                  
+                  
+                >标签</a></li><li class="menu-item menu-system">
+          <span class="menu-system-item theme-switch" title="切换主题"><i class="fa-solid fa-adjust fa-fw" aria-hidden="true"></i></span></li>
+      </ul>
+    </nav>
+  </div>
+</header><main class="container"><aside class="toc" id="toc-auto"><h2 class="toc-title">目录&nbsp;<i class="toc-icon fa-solid fa-angle-down fa-fw" aria-hidden="true"></i></h2>
+      <div class="toc-content" id="toc-content-auto"></div></aside>
+
+  <aside class="aside-custom">
+    </aside>
+
+  <article class="page single">
+    <div class="header"><h1 class="single-title animate__animated animate__flipInX"><span>通过 Kerberos Pre-Authentication 进行域用户帐户枚举和口令爆破</span>
+      </h1></div><div class="post-meta">
+      <div class="post-meta-line"><span class="post-author"><span class="author"><img loading="lazy" src="/images/logo.jpeg" srcset="/images/logo.jpeg, /images/logo.jpeg 1.5x, /images/logo.jpeg 2x" sizes="auto" data-title="TryA9ain" data-alt="TryA9ain" class="avatar" style="background: url(/svg/loading.min.svg) no-repeat center;" onload="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}this.dataset.lazyloaded='';" onerror="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}"/>&nbsp;TryA9ain</span></span>
+          <span class="post-category">收录于 <a href="/categories/%E5%9F%9F%E6%B8%97%E9%80%8F%E7%9B%B8%E5%85%B3%E7%9F%A5%E8%AF%86/"><i class="fa-regular fa-folder fa-fw" aria-hidden="true"></i> 域渗透相关知识</a></span></div>
+      <div class="post-meta-line"><span title="发布于 2023-03-07 13:37:22"><i class="fa-regular fa-calendar-alt fa-fw me-1" aria-hidden="true"></i><time datetime="2023-03-07">2023-03-07</time></span>&nbsp;<span title="更新于 2023-03-07 13:37:22"><i class="fa-regular fa-edit fa-fw me-1" aria-hidden="true"></i><time datetime="2023-03-07">2023-03-07</time></span>&nbsp;<span><i class="fa-solid fa-pencil-alt fa-fw me-1" aria-hidden="true"></i>约 1088 字</span>&nbsp;<span><i class="fa-regular fa-clock fa-fw me-1" aria-hidden="true"></i>预计阅读 3 分钟</span>&nbsp;</div>
+    </div><div class="details toc" id="toc-static" data-kept="false">
+        <div class="details-summary toc-title">
+          <span>目录</span>
+          <span><i class="details-icon fa-solid fa-angle-right" aria-hidden="true"></i></span>
+        </div>
+        <div class="details-content toc-content" id="toc-content-static"><nav id="TableOfContents">
+  <ul>
+    <li><a href="#简介">简介</a></li>
+    <li><a href="#kerbrute-的适用场景">kerbrute 的适用场景</a></li>
+    <li><a href="#工具利用">工具利用</a>
+      <ul>
+        <li><a href="#用户枚举">用户枚举</a>
+          <ul>
+            <li><a href="#wireshark-分析">WireShark 分析</a></li>
+          </ul>
+        </li>
+        <li><a href="#密码喷洒">密码喷洒</a>
+          <ul>
+            <li><a href="#wireshark-分析-1">WireShark 分析</a></li>
+          </ul>
+        </li>
+        <li><a href="#brute-user">Brute User</a></li>
+        <li><a href="#brute-force">Brute Force</a></li>
+      </ul>
+    </li>
+    <li><a href="#总结">总结</a></li>
+    <li><a href="#参考">参考</a></li>
+  </ul>
+</nav></div>
+      </div><div class="content" id="content"><p>本文主要记录了通过 Kerberos Pre-Authentication 进行域用户帐户枚举和口令爆破.</p>
+<h2 id="简介">简介</h2>
+<ul>
+<li>通过 LDAP 协议暴力破解域用户帐户口令会产生 4625 (An account failed to log on) 日志.</li>
+<li>使用 <a href="https://github.com/ropnop/kerbrute"target="_blank" rel="external nofollow noopener noreferrer">kerbrute</a> 通过 Kerberos Pre-Authentication (预身份认证) 进行暴力破解时不会产生 4625 (An account failed to log on) 日志, 但是会产生以下日志：
+<ul>
+<li><a href="https://www.ultimatewindowssecurity.com/securitylog/encyclopedia/event.aspx?eventID=4768"target="_blank" rel="external nofollow noopener noreferrer">4768 - A Kerberos authentication ticket (TGT) was requested</a>.</li>
+<li><a href="https://www.ultimatewindowssecurity.com/securitylog/encyclopedia/event.aspx?eventID=4771"target="_blank" rel="external nofollow noopener noreferrer">4771 - Kerberos Pre-Authentication failed</a>.</li>
+</ul>
+</li>
+</ul>
+<p>Kerberos Pre-Authentication 对应的端口默认为 88.</p>
+<p>kerbrute 使用 UDP 协议实现 Kerberos Pre-Authentication, 用来进行域用户帐户枚举和口令爆破.</p>
+<h2 id="kerbrute-的适用场景">kerbrute 的适用场景</h2>
+<p>没有域用户帐户的口令, 且当前不在域内, 从域外对域用户帐户进行用户枚举和密码喷洒.</p>
+<h2 id="工具利用">工具利用</h2>
+<h3 id="用户枚举">用户枚举</h3>
+<p>该功能对应的参数是: userenum.</p>
+<p>用来验证用户帐户是否存在, 结果会输出到 results.txt 文件中.</p>
+<pre tabindex="0"><code>kerbrute_windows_amd64.exe userenum --dc dc.missyou.com -d missyou.com -o results.txt username.txt
+</code></pre><p><img loading="lazy" src="images/Pasted%20image%2020230306134801.png" srcset="/posts/%E9%80%9A%E8%BF%87-kerberos-pre-authentication-%E8%BF%9B%E8%A1%8C%E7%94%A8%E6%88%B7%E6%9E%9A%E4%B8%BE%E5%92%8C%E5%8F%A3%E4%BB%A4%E7%88%86%E7%A0%B4/images/Pasted%20image%2020230306134801.png, images/Pasted%20image%2020230306134801.png 1.5x, /posts/%E9%80%9A%E8%BF%87-kerberos-pre-authentication-%E8%BF%9B%E8%A1%8C%E7%94%A8%E6%88%B7%E6%9E%9A%E4%B8%BE%E5%92%8C%E5%8F%A3%E4%BB%A4%E7%88%86%E7%A0%B4/images/Pasted%20image%2020230306134801.png 2x" sizes="auto" data-title="/posts/%E9%80%9A%E8%BF%87-kerberos-pre-authentication-%E8%BF%9B%E8%A1%8C%E7%94%A8%E6%88%B7%E6%9E%9A%E4%B8%BE%E5%92%8C%E5%8F%A3%E4%BB%A4%E7%88%86%E7%A0%B4/images/Pasted%20image%2020230306134801.png" data-alt="/posts/%E9%80%9A%E8%BF%87-kerberos-pre-authentication-%E8%BF%9B%E8%A1%8C%E7%94%A8%E6%88%B7%E6%9E%9A%E4%B8%BE%E5%92%8C%E5%8F%A3%E4%BB%A4%E7%88%86%E7%A0%B4/images/Pasted%20image%2020230306134801.png" width="1918" height="526" style="background: url(/svg/loading.min.svg) no-repeat center;" onload="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}this.dataset.lazyloaded='';" onerror="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}"/></p>
+<p>这会生成一个 Windows 事件 ID: <a href="https://www.ultimatewindowssecurity.com/securitylog/encyclopedia/event.aspx?eventID=4768"target="_blank" rel="external nofollow noopener noreferrer">4768</a>.</p>
+<p>这不会导致任何登录失败, 因此不会锁定任何帐户.</p>
+<h4 id="wireshark-分析">WireShark 分析</h4>
+<p>使用 WireShark 抓取 Kerbrute 用户枚举功能产生的数据包可以看到, <a href="https://github.com/ropnop/kerbrute"target="_blank" rel="external nofollow noopener noreferrer">kerbrute</a> 发送的数据包使用的是 UDP 协议.</p>
+<p><img loading="lazy" src="images/Pasted%20image%2020230306161311.png" srcset="/posts/%E9%80%9A%E8%BF%87-kerberos-pre-authentication-%E8%BF%9B%E8%A1%8C%E7%94%A8%E6%88%B7%E6%9E%9A%E4%B8%BE%E5%92%8C%E5%8F%A3%E4%BB%A4%E7%88%86%E7%A0%B4/images/Pasted%20image%2020230306161311.png, images/Pasted%20image%2020230306161311.png 1.5x, /posts/%E9%80%9A%E8%BF%87-kerberos-pre-authentication-%E8%BF%9B%E8%A1%8C%E7%94%A8%E6%88%B7%E6%9E%9A%E4%B8%BE%E5%92%8C%E5%8F%A3%E4%BB%A4%E7%88%86%E7%A0%B4/images/Pasted%20image%2020230306161311.png 2x" sizes="auto" data-title="/posts/%E9%80%9A%E8%BF%87-kerberos-pre-authentication-%E8%BF%9B%E8%A1%8C%E7%94%A8%E6%88%B7%E6%9E%9A%E4%B8%BE%E5%92%8C%E5%8F%A3%E4%BB%A4%E7%88%86%E7%A0%B4/images/Pasted%20image%2020230306161311.png" data-alt="/posts/%E9%80%9A%E8%BF%87-kerberos-pre-authentication-%E8%BF%9B%E8%A1%8C%E7%94%A8%E6%88%B7%E6%9E%9A%E4%B8%BE%E5%92%8C%E5%8F%A3%E4%BB%A4%E7%88%86%E7%A0%B4/images/Pasted%20image%2020230306161311.png" width="302" height="44" style="background: url(/svg/loading.min.svg) no-repeat center;" onload="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}this.dataset.lazyloaded='';" onerror="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}"/></p>
+<p>如果 KDC 返回 <code>ERR_PREAUTH_REQUIRED</code>, 则说明该用户帐户存在, 指示客户端需要提供更多凭据来进行身份验证.</p>
+<p><img loading="lazy" src="images/Pasted%20image%2020230306155838.png" srcset="/posts/%E9%80%9A%E8%BF%87-kerberos-pre-authentication-%E8%BF%9B%E8%A1%8C%E7%94%A8%E6%88%B7%E6%9E%9A%E4%B8%BE%E5%92%8C%E5%8F%A3%E4%BB%A4%E7%88%86%E7%A0%B4/images/Pasted%20image%2020230306155838.png, images/Pasted%20image%2020230306155838.png 1.5x, /posts/%E9%80%9A%E8%BF%87-kerberos-pre-authentication-%E8%BF%9B%E8%A1%8C%E7%94%A8%E6%88%B7%E6%9E%9A%E4%B8%BE%E5%92%8C%E5%8F%A3%E4%BB%A4%E7%88%86%E7%A0%B4/images/Pasted%20image%2020230306155838.png 2x" sizes="auto" data-title="/posts/%E9%80%9A%E8%BF%87-kerberos-pre-authentication-%E8%BF%9B%E8%A1%8C%E7%94%A8%E6%88%B7%E6%9E%9A%E4%B8%BE%E5%92%8C%E5%8F%A3%E4%BB%A4%E7%88%86%E7%A0%B4/images/Pasted%20image%2020230306155838.png" data-alt="/posts/%E9%80%9A%E8%BF%87-kerberos-pre-authentication-%E8%BF%9B%E8%A1%8C%E7%94%A8%E6%88%B7%E6%9E%9A%E4%B8%BE%E5%92%8C%E5%8F%A3%E4%BB%A4%E7%88%86%E7%A0%B4/images/Pasted%20image%2020230306155838.png" width="746" height="514" style="background: url(/svg/loading.min.svg) no-repeat center;" onload="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}this.dataset.lazyloaded='';" onerror="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}"/></p>
+<p>如果 KDC 返回 <code>ERR_C_PRINCIPAL_UNKNOWN</code>, 则说明 KDC 无法识别给定的主体名称, 此处表示该用户帐户不存在.</p>
+<p><img loading="lazy" src="images/Pasted%20image%2020230306161933.png" srcset="/posts/%E9%80%9A%E8%BF%87-kerberos-pre-authentication-%E8%BF%9B%E8%A1%8C%E7%94%A8%E6%88%B7%E6%9E%9A%E4%B8%BE%E5%92%8C%E5%8F%A3%E4%BB%A4%E7%88%86%E7%A0%B4/images/Pasted%20image%2020230306161933.png, images/Pasted%20image%2020230306161933.png 1.5x, /posts/%E9%80%9A%E8%BF%87-kerberos-pre-authentication-%E8%BF%9B%E8%A1%8C%E7%94%A8%E6%88%B7%E6%9E%9A%E4%B8%BE%E5%92%8C%E5%8F%A3%E4%BB%A4%E7%88%86%E7%A0%B4/images/Pasted%20image%2020230306161933.png 2x" sizes="auto" data-title="/posts/%E9%80%9A%E8%BF%87-kerberos-pre-authentication-%E8%BF%9B%E8%A1%8C%E7%94%A8%E6%88%B7%E6%9E%9A%E4%B8%BE%E5%92%8C%E5%8F%A3%E4%BB%A4%E7%88%86%E7%A0%B4/images/Pasted%20image%2020230306161933.png" data-alt="/posts/%E9%80%9A%E8%BF%87-kerberos-pre-authentication-%E8%BF%9B%E8%A1%8C%E7%94%A8%E6%88%B7%E6%9E%9A%E4%B8%BE%E5%92%8C%E5%8F%A3%E4%BB%A4%E7%88%86%E7%A0%B4/images/Pasted%20image%2020230306161933.png" width="752" height="526" style="background: url(/svg/loading.min.svg) no-repeat center;" onload="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}this.dataset.lazyloaded='';" onerror="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}"/></p>
+<h3 id="密码喷洒">密码喷洒</h3>
+<p>该功能对应的参数是: passwordspray.</p>
+<p>在确定了哪些域用户帐户存在后, 可以使用这个功能来验证密码是否正确.</p>
+<pre tabindex="0"><code>kerbrute_windows_amd64.exe passwordspray --dc dc.missyou.com -d missyou.com -o results.txt username.txt asd123!
+</code></pre><p><img loading="lazy" src="images/Pasted%20image%2020230306135646.png" srcset="/posts/%E9%80%9A%E8%BF%87-kerberos-pre-authentication-%E8%BF%9B%E8%A1%8C%E7%94%A8%E6%88%B7%E6%9E%9A%E4%B8%BE%E5%92%8C%E5%8F%A3%E4%BB%A4%E7%88%86%E7%A0%B4/images/Pasted%20image%2020230306135646.png, images/Pasted%20image%2020230306135646.png 1.5x, /posts/%E9%80%9A%E8%BF%87-kerberos-pre-authentication-%E8%BF%9B%E8%A1%8C%E7%94%A8%E6%88%B7%E6%9E%9A%E4%B8%BE%E5%92%8C%E5%8F%A3%E4%BB%A4%E7%88%86%E7%A0%B4/images/Pasted%20image%2020230306135646.png 2x" sizes="auto" data-title="/posts/%E9%80%9A%E8%BF%87-kerberos-pre-authentication-%E8%BF%9B%E8%A1%8C%E7%94%A8%E6%88%B7%E6%9E%9A%E4%B8%BE%E5%92%8C%E5%8F%A3%E4%BB%A4%E7%88%86%E7%A0%B4/images/Pasted%20image%2020230306135646.png" data-alt="/posts/%E9%80%9A%E8%BF%87-kerberos-pre-authentication-%E8%BF%9B%E8%A1%8C%E7%94%A8%E6%88%B7%E6%9E%9A%E4%B8%BE%E5%92%8C%E5%8F%A3%E4%BB%A4%E7%88%86%E7%A0%B4/images/Pasted%20image%2020230306135646.png" width="1922" height="496" style="background: url(/svg/loading.min.svg) no-repeat center;" onload="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}this.dataset.lazyloaded='';" onerror="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}"/></p>
+<p><strong>比较实用的情景是</strong>: <strong>当我们拥有大量域用户帐户时, 对于测试一个或两个常用密码很有用</strong>.</p>
+<p>注意: <strong>这会增加域用户帐户登录失败的计数, 当域用户帐户登录失败的次数达到域内 “帐户锁定策略” 中设置的失败次数上限时, 该域用户帐户会被锁定</strong>.</p>
+<p>这将生成两个事件 ID:</p>
+<ul>
+<li><a href="https://www.ultimatewindowssecurity.com/securitylog/encyclopedia/event.aspx?eventID=4768"target="_blank" rel="external nofollow noopener noreferrer">4768 - A Kerberos authentication ticket (TGT) was requested</a>.</li>
+<li><a href="https://www.ultimatewindowssecurity.com/securitylog/encyclopedia/event.aspx?eventID=4771"target="_blank" rel="external nofollow noopener noreferrer">4771 - Kerberos Pre-Authentication failed</a>.</li>
+</ul>
+<h4 id="wireshark-分析-1">WireShark 分析</h4>
+<p>如果密码错误, 则 KDC 会返回错误: <code>eRR_PREAUTH_FAILED</code>.</p>
+<p><img loading="lazy" src="images/Pasted%20image%2020230306164209.png" srcset="/posts/%E9%80%9A%E8%BF%87-kerberos-pre-authentication-%E8%BF%9B%E8%A1%8C%E7%94%A8%E6%88%B7%E6%9E%9A%E4%B8%BE%E5%92%8C%E5%8F%A3%E4%BB%A4%E7%88%86%E7%A0%B4/images/Pasted%20image%2020230306164209.png, images/Pasted%20image%2020230306164209.png 1.5x, /posts/%E9%80%9A%E8%BF%87-kerberos-pre-authentication-%E8%BF%9B%E8%A1%8C%E7%94%A8%E6%88%B7%E6%9E%9A%E4%B8%BE%E5%92%8C%E5%8F%A3%E4%BB%A4%E7%88%86%E7%A0%B4/images/Pasted%20image%2020230306164209.png 2x" sizes="auto" data-title="/posts/%E9%80%9A%E8%BF%87-kerberos-pre-authentication-%E8%BF%9B%E8%A1%8C%E7%94%A8%E6%88%B7%E6%9E%9A%E4%B8%BE%E5%92%8C%E5%8F%A3%E4%BB%A4%E7%88%86%E7%A0%B4/images/Pasted%20image%2020230306164209.png" data-alt="/posts/%E9%80%9A%E8%BF%87-kerberos-pre-authentication-%E8%BF%9B%E8%A1%8C%E7%94%A8%E6%88%B7%E6%9E%9A%E4%B8%BE%E5%92%8C%E5%8F%A3%E4%BB%A4%E7%88%86%E7%A0%B4/images/Pasted%20image%2020230306164209.png" width="1432" height="402" style="background: url(/svg/loading.min.svg) no-repeat center;" onload="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}this.dataset.lazyloaded='';" onerror="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}"/></p>
+<p>如果密码正确, 则 KDC 会返回正常的 AS_REP 响应, 其中包含 TGT.</p>
+<p><img loading="lazy" src="images/Pasted%20image%2020230306170124.png" srcset="/posts/%E9%80%9A%E8%BF%87-kerberos-pre-authentication-%E8%BF%9B%E8%A1%8C%E7%94%A8%E6%88%B7%E6%9E%9A%E4%B8%BE%E5%92%8C%E5%8F%A3%E4%BB%A4%E7%88%86%E7%A0%B4/images/Pasted%20image%2020230306170124.png, images/Pasted%20image%2020230306170124.png 1.5x, /posts/%E9%80%9A%E8%BF%87-kerberos-pre-authentication-%E8%BF%9B%E8%A1%8C%E7%94%A8%E6%88%B7%E6%9E%9A%E4%B8%BE%E5%92%8C%E5%8F%A3%E4%BB%A4%E7%88%86%E7%A0%B4/images/Pasted%20image%2020230306170124.png 2x" sizes="auto" data-title="/posts/%E9%80%9A%E8%BF%87-kerberos-pre-authentication-%E8%BF%9B%E8%A1%8C%E7%94%A8%E6%88%B7%E6%9E%9A%E4%B8%BE%E5%92%8C%E5%8F%A3%E4%BB%A4%E7%88%86%E7%A0%B4/images/Pasted%20image%2020230306170124.png" data-alt="/posts/%E9%80%9A%E8%BF%87-kerberos-pre-authentication-%E8%BF%9B%E8%A1%8C%E7%94%A8%E6%88%B7%E6%9E%9A%E4%B8%BE%E5%92%8C%E5%8F%A3%E4%BB%A4%E7%88%86%E7%A0%B4/images/Pasted%20image%2020230306170124.png" width="1424" height="604" style="background: url(/svg/loading.min.svg) no-repeat center;" onload="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}this.dataset.lazyloaded='';" onerror="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}"/></p>
+<h3 id="brute-user">Brute User</h3>
+<p>该功能对应的参数是: bruteuser.</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-PowerShell" data-lang="PowerShell"><span class="line"><span class="cl"><span class="n">kerbrute_windows_amd64</span><span class="p">.</span><span class="py">exe</span> <span class="n">bruteuser</span> <span class="p">-</span><span class="n">-dc</span> <span class="n">dc</span><span class="p">.</span><span class="py">missyou</span><span class="p">.</span><span class="py">com</span> <span class="n">-d</span> <span class="n">missyou</span><span class="p">.</span><span class="py">com</span> <span class="n">-o</span> <span class="n">results</span><span class="p">.</span><span class="py">txt</span> <span class="n">passwords</span><span class="p">.</span><span class="py">txt</span> <span class="n">ligang</span>
+</span></span></code></pre></div><p><img loading="lazy" src="images/Pasted%20image%2020230306171621.png" srcset="/posts/%E9%80%9A%E8%BF%87-kerberos-pre-authentication-%E8%BF%9B%E8%A1%8C%E7%94%A8%E6%88%B7%E6%9E%9A%E4%B8%BE%E5%92%8C%E5%8F%A3%E4%BB%A4%E7%88%86%E7%A0%B4/images/Pasted%20image%2020230306171621.png, images/Pasted%20image%2020230306171621.png 1.5x, /posts/%E9%80%9A%E8%BF%87-kerberos-pre-authentication-%E8%BF%9B%E8%A1%8C%E7%94%A8%E6%88%B7%E6%9E%9A%E4%B8%BE%E5%92%8C%E5%8F%A3%E4%BB%A4%E7%88%86%E7%A0%B4/images/Pasted%20image%2020230306171621.png 2x" sizes="auto" data-title="/posts/%E9%80%9A%E8%BF%87-kerberos-pre-authentication-%E8%BF%9B%E8%A1%8C%E7%94%A8%E6%88%B7%E6%9E%9A%E4%B8%BE%E5%92%8C%E5%8F%A3%E4%BB%A4%E7%88%86%E7%A0%B4/images/Pasted%20image%2020230306171621.png" data-alt="/posts/%E9%80%9A%E8%BF%87-kerberos-pre-authentication-%E8%BF%9B%E8%A1%8C%E7%94%A8%E6%88%B7%E6%9E%9A%E4%B8%BE%E5%92%8C%E5%8F%A3%E4%BB%A4%E7%88%86%E7%A0%B4/images/Pasted%20image%2020230306171621.png" width="1918" height="498" style="background: url(/svg/loading.min.svg) no-repeat center;" onload="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}this.dataset.lazyloaded='';" onerror="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}"/></p>
+<p>这个功能就是传统的针对域用户帐户进行暴力破解密码.</p>
+<p>注意: <strong>如果域内有 “帐户锁定策略”, 爆破密码会导致对应的域用户帐户锁定, 仅当确定没有 “帐户锁定策略” 时才运行此命令!</strong></p>
+<p>这将生成两个事件 ID:</p>
+<ul>
+<li><a href="https://www.ultimatewindowssecurity.com/securitylog/encyclopedia/event.aspx?eventID=4768"target="_blank" rel="external nofollow noopener noreferrer">4768 - A Kerberos authentication ticket (TGT) was requested</a>.</li>
+<li><a href="https://www.ultimatewindowssecurity.com/securitylog/encyclopedia/event.aspx?eventID=4771"target="_blank" rel="external nofollow noopener noreferrer">4771 - Kerberos Pre-Authentication failed</a>.</li>
+</ul>
+<h3 id="brute-force">Brute Force</h3>
+<p>该功能对应的参数是: bruteforce.</p>
+<p>这个模式只是从文件中读取用户名和密码组合, 格式为 <code>username:password</code>.</p>
+<pre tabindex="0"><code>wanghong:wanghong
+ligang:123456
+yunwei:88888
+wangwei:999999
+ligang:ligang
+</code></pre><div class="highlight"><pre tabindex="0" class="chroma"><code class="language-PowerShell" data-lang="PowerShell"><span class="line"><span class="cl"><span class="n">kerbrute_windows_amd64</span><span class="p">.</span><span class="py">exe</span> <span class="n">bruteforce</span> <span class="p">-</span><span class="n">-dc</span> <span class="n">dc</span><span class="p">.</span><span class="py">missyou</span><span class="p">.</span><span class="py">com</span> <span class="n">-d</span> <span class="n">missyou</span><span class="p">.</span><span class="py">com</span> <span class="n">-o</span> <span class="n">results</span><span class="p">.</span><span class="py">txt</span> <span class="n">lists</span><span class="p">.</span><span class="py">txt</span>
+</span></span></code></pre></div><p><img loading="lazy" src="images/Pasted%20image%2020230306171307.png" srcset="/posts/%E9%80%9A%E8%BF%87-kerberos-pre-authentication-%E8%BF%9B%E8%A1%8C%E7%94%A8%E6%88%B7%E6%9E%9A%E4%B8%BE%E5%92%8C%E5%8F%A3%E4%BB%A4%E7%88%86%E7%A0%B4/images/Pasted%20image%2020230306171307.png, images/Pasted%20image%2020230306171307.png 1.5x, /posts/%E9%80%9A%E8%BF%87-kerberos-pre-authentication-%E8%BF%9B%E8%A1%8C%E7%94%A8%E6%88%B7%E6%9E%9A%E4%B8%BE%E5%92%8C%E5%8F%A3%E4%BB%A4%E7%88%86%E7%A0%B4/images/Pasted%20image%2020230306171307.png 2x" sizes="auto" data-title="/posts/%E9%80%9A%E8%BF%87-kerberos-pre-authentication-%E8%BF%9B%E8%A1%8C%E7%94%A8%E6%88%B7%E6%9E%9A%E4%B8%BE%E5%92%8C%E5%8F%A3%E4%BB%A4%E7%88%86%E7%A0%B4/images/Pasted%20image%2020230306171307.png" data-alt="/posts/%E9%80%9A%E8%BF%87-kerberos-pre-authentication-%E8%BF%9B%E8%A1%8C%E7%94%A8%E6%88%B7%E6%9E%9A%E4%B8%BE%E5%92%8C%E5%8F%A3%E4%BB%A4%E7%88%86%E7%A0%B4/images/Pasted%20image%2020230306171307.png" width="1922" height="492" style="background: url(/svg/loading.min.svg) no-repeat center;" onload="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}this.dataset.lazyloaded='';" onerror="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}"/></p>
+<p>这个功能将跳过任何 &ldquo;空白行&rdquo; 或带有空白 &ldquo;用户名/密码&rdquo; 的行.</p>
+<p>这将生成两个事件 ID:</p>
+<ul>
+<li><a href="https://www.ultimatewindowssecurity.com/securitylog/encyclopedia/event.aspx?eventID=4768"target="_blank" rel="external nofollow noopener noreferrer">4768 - A Kerberos authentication ticket (TGT) was requested</a>.</li>
+<li><a href="https://www.ultimatewindowssecurity.com/securitylog/encyclopedia/event.aspx?eventID=4771"target="_blank" rel="external nofollow noopener noreferrer">4771 - Kerberos Pre-Authentication failed</a>.</li>
+</ul>
+<p>注意: <strong>如果域内有 “帐户锁定策略”, 爆破密码会导致对应的域用户帐户锁定, 仅当确定没有帐户锁定策略时才运行此命令!</strong></p>
+<h2 id="总结">总结</h2>
+<p>其实比较常用的功能就是 &ldquo;用户枚举&rdquo; 和 &ldquo;密码喷洒&rdquo;, 因为这两个功能并不会导致用户帐户被锁定.</p>
+<p><strong>感谢耐心阅读, 文章仅供参考, 本人学艺不精, 不足之处欢迎师傅们指点和纠正!</strong></p>
+<h2 id="参考">参考</h2>
+<p><a href="https://3gstudent.github.io/%E6%B8%97%E9%80%8F%E6%8A%80%E5%B7%A7-%E9%80%9A%E8%BF%87Kerberos-pre-auth%E8%BF%9B%E8%A1%8C%E7%94%A8%E6%88%B7%E6%9E%9A%E4%B8%BE%E5%92%8C%E5%8F%A3%E4%BB%A4%E7%88%86%E7%A0%B4"target="_blank" rel="external nofollow noopener noreferrer">渗透技巧-通过Kerberos-pre-auth进行用户枚举和口令爆破</a></p></div><div class="post-footer" id="post-footer">
+  <div class="post-info">
+    <div class="post-info-line">
+      <div class="post-info-mod">
+        <span title="更新于 2023-03-07 13:37:22">更新于 2023-03-07&nbsp;</span>
+      </div></div>
+    <div class="post-info-line">
+      <div class="post-info-md"></div>
+      <div class="post-info-share">
+        <span></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="post-info-more">
+    <section class="post-tags"><i class="fa-solid fa-tags fa-fw me-1" aria-hidden="true"></i><a href='/tags/%E5%9F%9F%E6%B8%97%E9%80%8F/' class="post-tag">域渗透</a></section>
+    <section>
+      <span><a href="javascript:void(0);" onclick="window.history.back();">返回</a></span>&nbsp;|&nbsp;<span><a href="/">主页</a></span>
+    </section>
+  </div>
+
+  <div class="post-nav"><a href="/posts/maq-0-%E7%9A%84%E7%AA%81%E7%A0%B4/" class="post-nav-item" rel="prev" title="noPac MAQ = 0 的突破"><i class="fa-solid fa-angle-left fa-fw" aria-hidden="true"></i>noPac MAQ = 0 的突破</a>
+      <a href="/posts/%E6%9E%9A%E4%B8%BE%E5%9F%9F%E5%86%85%E8%AE%A1%E7%AE%97%E6%9C%BA%E4%B8%8A%E7%99%BB%E5%BD%95%E7%9A%84%E7%94%A8%E6%88%B7/" class="post-nav-item" rel="next" title="域内普通域用户权限查找域内所有计算机上登录的用户">域内普通域用户权限查找域内所有计算机上登录的用户<i class="fa-solid fa-angle-right fa-fw" aria-hidden="true"></i></a></div>
+</div>
+</article></main></div><div class="widgets"><div class="fixed-buttons animate__faster d-none"><div class="fixed-button back-to-top" role="button" aria-label="回到顶部"><i class="fa-solid fa-arrow-up fa-fw" aria-hidden="true"></i><span class="variant-numeric d-none">0%</span>
+        </div></div><div id="mask"></div><noscript>
+    <div class="noscript-warning">FixIt 主题在启用 JavaScript 的情况下效果最佳。</div>
+  </noscript>
+</div><link rel="stylesheet" href="/lib/cookieconsent/cookieconsent.min.css"><script src="/lib/cookieconsent/cookieconsent.min.js" defer></script><script>window.config={"code":{"copyTitle":"复制到剪贴板","editLockTitle":"锁定可编辑代码块","editUnLockTitle":"解锁可编辑代码块","editable":true,"maxShownLines":10},"comment":{"enable":false},"cookieconsent":{"content":{"dismiss":"同意","link":"了解更多","message":"本网站使用 Cookies 来改善您的浏览体验。"},"enable":true,"palette":{"button":{"background":"#f0f0f0"},"popup":{"background":"#1aa3ff"}},"theme":"edgeless"}};</script><script src="/js/theme.min.js" defer></script></body>
+</html>

